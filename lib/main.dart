@@ -6,6 +6,7 @@ import 'firebase_options.dart';
 import 'screens/home_shell.dart';
 import 'screens/setup_screen.dart';
 import 'services/event_store.dart';
+import 'services/search_log.dart';
 import 'state/app_state.dart';
 import 'theme.dart';
 
@@ -23,6 +24,7 @@ Future<void> main() async {
     }
     store = FirestoreEventStore();
     cloud = true;
+    SearchLog.instance.enabled = true;
   } catch (e) {
     debugPrint('Firebase not set up yet, saving on this device: $e');
     store = LocalEventStore();

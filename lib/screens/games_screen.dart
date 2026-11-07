@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/games.dart';
 import '../models/event_details.dart';
 import '../services/plan_generator.dart';
+import '../services/search_log.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -137,7 +138,16 @@ class _GamesScreenState extends State<GamesScreen> {
                 spacing: 6,
                 runSpacing: 6,
                 children: [
-                  for (final f in filters) Pill(label: f, small: true, selected: f == filter, onTap: () => setState(() => filter = f)),
+                  for (final f in filters)
+                    Pill(
+                      label: f,
+                      small: true,
+                      selected: f == filter,
+                      onTap: () {
+                        setState(() => filter = f);
+                        SearchLog.instance.log('games_filter', filters: {'filter': f, 'guests': e.guests, 'indoor': e.indoor});
+                      },
+                    ),
                 ],
               ),
               const SizedBox(height: 14),

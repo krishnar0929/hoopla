@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../data/helpers.dart';
 import '../models/event_details.dart';
 import '../services/plan_generator.dart';
+import '../services/search_log.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -19,6 +22,26 @@ class NearbyScreen extends StatefulWidget {
 class _NearbyScreenState extends State<NearbyScreen> {
   String selected = helperCategories.first.label;
   String query = '';
+  Timer? _searchPause;
+
+  @override
+  void dispose() {
+    _searchPause?.cancel();
+    super.dispose();
+  }
+
+  /// Logs the search once the person stops typing for a moment.
+  void _onSearch(String v, {bool now = false}) {
+    setState(() => query = v);
+    _searchPause?.cancel();
+    if (v.trim().length < 2) return;
+    void send() => SearchLog.instance.log('nearby_search', query: v.trim(), filters: {'category': selected});
+    if (now) {
+      send();
+    } else {
+      _searchPause = Timer(const Duration(milliseconds: 1500), send);
+    }
+  }
 
   Future<void> _addVendor(String category) async {
     final name = TextEditingController();
@@ -92,7 +115,9 @@ class _NearbyScreenState extends State<NearbyScreen> {
         ),
         const SizedBox(height: 14),
         TextField(
-          onChanged: (v) => setState(() => query = v),
+          onChanged: _onSearch,
+          onSubmitted: (v) => _onSearch(v, now: true),
+          textInputAction: TextInputAction.search,
           decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), hintText: 'Search photographers, cakes, panthulu…'),
         ),
         const SizedBox(height: 14),
@@ -101,7 +126,16 @@ class _NearbyScreenState extends State<NearbyScreen> {
           runSpacing: 6,
           children: [
             for (final c in cats)
-              Pill(label: c.label, small: true, selectedColor: HC.violet, selected: c.label == selected, onTap: () => setState(() => selected = c.label)),
+              Pill(
+                label: c.label,
+                small: true,
+                selectedColor: HC.violet,
+                selected: c.label == selected,
+                onTap: () {
+                  setState(() => selected = c.label);
+                  SearchLog.instance.log('nearby_category', query: query.trim().isEmpty ? null : query.trim(), filters: {'category': c.label});
+                },
+              ),
           ],
         ),
         const SizedBox(height: 20),
