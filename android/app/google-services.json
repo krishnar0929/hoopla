@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "376055601845",
+    "project_id": "hoopla-894ca",
+    "storage_bucket": "hoopla-894ca.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:376055601845:android:013e15b11a1ddd4c713cfc",
+        "android_client_info": {
+          "package_name": "com.northbitapps.hoopla"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDI9yRKRljymyqmZ5AYMuQb5m5cgnNrkVA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
