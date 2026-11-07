@@ -65,3 +65,29 @@ firebase deploy --only firestore:rules
 - AI-written plans and game ideas through a Cloud Function
 - Sign in with Google/Apple so events follow you across devices
 - Shared photo album for guests
+
+## Search history (`search_logs`)
+
+Every search and filter choice is saved to the Firestore collection `search_logs`:
+
+| Field | Example |
+| --- | --- |
+| `type` | `nearby_search`, `nearby_category`, `games_filter`, `plan_created` |
+| `query` | `birthday photographer` |
+| `filters` | `{category: "Photographers"}` or `{occasion: "Birthday", guests: 40, indoor: true, …}` |
+| `device` | `{platform: "ios", name: "iPhone", model: "iPhone16,2", osVersion: "18.1"}` |
+| `appVersion` | `0.1.0+1` |
+| `ip` | `203.0.113.7` (only when the `logSearch` function is deployed; otherwise `null`) |
+| `uid` | the signed-in user's id |
+| `createdAt` | server time |
+
+The app can only add entries, never read them; view them in the Firebase console.
+The IP comes from the `logSearch` Cloud Function (`functions/index.js`), which needs the Blaze plan:
+
+```bash
+cd functions && npm install && cd ..
+firebase deploy --only functions,firestore:rules
+```
+
+IP address and device details are personal data: mention them in the privacy policy and in
+App Store Connect → App Privacy before releasing.

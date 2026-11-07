@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../models/event_details.dart';
 import '../services/plan_generator.dart';
+import '../services/search_log.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -102,6 +103,15 @@ class _SetupScreenState extends State<SetupScreen> {
       ..energy = energy;
     e.gameIds = PlanGenerator.suggestGameIds(e);
     await state.saveEvent(e);
+    SearchLog.instance.log('plan_created', filters: {
+      'occasion': occasion,
+      'guests': guests,
+      'hours': hours,
+      'indoor': indoor,
+      'audience': audience.name,
+      'energy': energyLevels[energy],
+      'date': date.toIso8601String().substring(0, 10),
+    });
     if (!mounted) return;
     final nav = Navigator.of(context);
     if (nav.canPop()) nav.pop();

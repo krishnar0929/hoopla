@@ -5,5 +5,17 @@ service cloud.firestore {
     match /users/{uid}/events/{eventId} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
+
+    // Search history. The app can add an entry for its own user but can never
+    // read, change or delete entries. View them in the Firebase console.
+    // The logSearch Cloud Function (which adds the IP address) bypasses these rules.
+    match /search_logs/{logId} {
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'type', 'query', 'filters', 'device', 'appVersion', 'ip', 'createdAt'])
+        && request.resource.data.ip == null
+        && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if false;
+    }
   }
 }
