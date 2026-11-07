@@ -10,3 +10,4 @@ ios/Pods/
 ios/.symlinks/
 android/.gradle/
 android/local.properties
+functions/node_modules/
