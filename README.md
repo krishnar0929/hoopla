@@ -91,3 +91,21 @@ firebase deploy --only functions,firestore:rules
 
 IP address and device details are personal data: mention them in the privacy policy and in
 App Store Connect → App Privacy before releasing.
+
+## Accounts, providers and Premium
+
+| | Guest (no login) | Free account | Premium |
+| --- | --- | --- | --- |
+| Create a plan, "Tell us about your event" | ✓ | ✓ | ✓ |
+| Timeline | first 3 steps | full | full |
+| Games | 3 | all | all + saved reels |
+| Checklist | – | ✓ | ✓ |
+| Budget, Nearby providers, Party mode | – | – | ✓ |
+| Active events | 1 | 1 | unlimited |
+
+- **Sign in:** Email (everywhere), Google (web), Apple (iPhone). Guests are linked to their new account, so their event comes along.
+- **Roles:** customers plan events; providers (photographers, decorators, planners, designers, cake makers, panthulu, DJs, …) publish a listing at `providers/{uid}` that Premium customers see in Nearby.
+- **Premium:** `users/{uid}.premium = true`, set in the Firebase console for now (payments come later). In debug builds the Upgrade screen has a "Developer: Premium on this device" switch for testing.
+- **Verified badge:** set `providers/{uid}.verified = true` in the console.
+- **Events:** ⋯ menu on the plan → Start new event, My events, Cancel this event (restorable).
+- **Delete account:** Account → Delete account (Apple requires this).

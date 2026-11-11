@@ -66,6 +66,7 @@ class EventDetails {
     List<ShortlistVendor>? shortlist,
     List<SavedLink>? savedLinks,
     this.budget,
+    this.status = 'active',
     DateTime? updatedAt,
   })  : gameIds = gameIds ?? [],
         doneTasks = doneTasks ?? [],
@@ -92,7 +93,12 @@ class EventDetails {
   List<ShortlistVendor> shortlist;
   List<SavedLink> savedLinks;
   double? budget;
+
+  /// 'active' or 'cancelled'. Cancelled events stay in My events and can be restored.
+  String status;
   DateTime updatedAt;
+
+  bool get isActive => status == 'active';
 
   static String newId() => DateTime.now().microsecondsSinceEpoch.toString();
 
@@ -119,6 +125,7 @@ class EventDetails {
         'shortlist': shortlist.map((v) => v.toMap()).toList(),
         'savedLinks': savedLinks.map((l) => l.toMap()).toList(),
         'budget': budget,
+        'status': status,
         'updatedAt': updatedAt.toUtc().toIso8601String(),
       };
 
@@ -141,6 +148,7 @@ class EventDetails {
       shortlist: maps(m['shortlist']).map(ShortlistVendor.fromMap).toList(),
       savedLinks: maps(m['savedLinks']).map(SavedLink.fromMap).toList(),
       budget: (m['budget'] as num?)?.toDouble(),
+      status: m['status'] as String? ?? 'active',
       updatedAt: DateTime.tryParse(m['updatedAt'] as String? ?? '')?.toLocal(),
     );
   }

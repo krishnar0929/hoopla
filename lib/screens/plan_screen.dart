@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -6,6 +8,9 @@ import '../services/plan_generator.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/locked.dart';
+import 'account_sheet.dart';
+import 'event_actions.dart';
 import 'setup_screen.dart';
 
 /// The generated plan: timeline, checklist and budget.
@@ -28,6 +33,7 @@ class _PlanScreenState extends State<PlanScreen> {
     final e = state.event!;
     final plan = state.plan;
     final days = e.daysToGo;
+    final access = state.access;
 
     return ListView(
       padding: EdgeInsets.zero,
@@ -49,10 +55,28 @@ class _PlanScreenState extends State<PlanScreen> {
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SetupScreen(existing: e))),
                   ),
                   const SizedBox(width: 8),
-                  _RoundIcon(
-                    icon: Icons.add_rounded,
-                    tooltip: 'Plan a new event',
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SetupScreen())),
+                  Material(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    shape: const CircleBorder(),
+                    child: PopupMenuButton<String>(
+                      tooltip: 'Event options',
+                      icon: const Icon(Icons.more_horiz_rounded, color: Colors.white, size: 20),
+                      onSelected: (v) {
+                        switch (v) {
+                          case 'new':
+                            startNewEvent(context);
+                          case 'events':
+                            showMyEvents(context);
+                          case 'cancel':
+                            confirmCancelEvent(context, e);
+                        }
+                      },
+                      itemBuilder: (_) => [
+                        _menuItem('new', Icons.add_rounded, 'Start new event'),
+                        _menuItem('events', Icons.event_note_outlined, 'My events (${state.events.length})'),
+                        _menuItem('cancel', Icons.event_busy_outlined, 'Cancel this event', danger: true),
+                      ],
+                    ),
                   ),
                   const Spacer(),
                   Container(
@@ -62,6 +86,12 @@ class _PlanScreenState extends State<PlanScreen> {
                       days > 1 ? '$days days to go' : days == 1 ? 'Tomorrow!' : days == 0 ? 'Today!' : 'Party done',
                       style: body(13, weight: FontWeight.w600),
                     ),
+                  ),
+                  const SizedBox(width: 8),
+                  _RoundIcon(
+                    icon: state.isSignedIn ? Icons.person_rounded : Icons.person_outline_rounded,
+                    tooltip: 'Account',
+                    onTap: () => showAccountSheet(context),
                   ),
                 ],
               ),
@@ -95,9 +125,21 @@ class _PlanScreenState extends State<PlanScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: switch (tab) {
-            0 => _Timeline(plan: plan),
-            1 => const _Checklist(),
-            _ => const _Budget(),
+            0 => _Timeline(plan: plan, showOnly: access == Access.guest ? 3 : null),
+            1 => access == Access.guest
+                ? const LockedCard(
+                    needs: Access.member,
+                    title: 'Your checklist',
+                    message: 'Sign in free to get a to-do list with due dates for invites, bookings and supplies.',
+                  )
+                : const _Checklist(),
+            _ => access == Access.premium
+                ? const _Budget()
+                : const LockedCard(
+                    needs: Access.premium,
+                    title: 'Budget planner',
+                    message: 'Premium splits your budget into food, decor, photos, cake and return gifts.',
+                  ),
           },
         ),
         Padding(
@@ -131,6 +173,20 @@ class _PlanScreenState extends State<PlanScreen> {
   }
 }
 
+PopupMenuItem<String> _menuItem(String value, IconData icon, String label, {bool danger = false}) {
+  final color = danger ? const Color(0xFFB42318) : HC.ink;
+  return PopupMenuItem<String>(
+    value: value,
+    child: Row(
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(width: 12),
+        Text(label, style: body(14, color: color)),
+      ],
+    ),
+  );
+}
+
 class _RoundIcon extends StatelessWidget {
   const _RoundIcon({required this.icon, required this.tooltip, required this.onTap});
   final IconData icon;
@@ -148,8 +204,11 @@ class _RoundIcon extends StatelessWidget {
 }
 
 class _Timeline extends StatelessWidget {
-  const _Timeline({required this.plan});
+  const _Timeline({required this.plan, this.showOnly});
   final Plan plan;
+
+  /// Guests see only the first few steps; the rest is blurred.
+  final int? showOnly;
 
   static Color _dot(StepKind k) => switch (k) {
         StepKind.game => HC.coral,
@@ -159,11 +218,48 @@ class _Timeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final steps = plan.timeline;
+    final limit = showOnly;
+    if (limit != null && steps.length > limit) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final s in steps.take(limit)) _row(s),
+          ClipRect(
+            child: ImageFiltered(
+              imageFilter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              child: IgnorePointer(
+                child: Opacity(
+                  opacity: 0.6,
+                  child: Column(children: [for (final s in steps.skip(limit).take(2)) _row(s)]),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          LockedCard(
+            needs: Access.member,
+            title: '${steps.length - limit} more steps in your plan',
+            message: 'Sign in free to see the full timeline, every game and your checklist.',
+          ),
+        ],
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final s in plan.timeline)
-          IntrinsicHeight(
+        for (final s in steps) _row(s),
+        if (plan.backupGames.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 80, top: 4),
+            child: Text('Backup games if there\'s time: ${plan.backupGames.map((g) => g.name).join(', ')}', style: body(12, color: HC.muted)),
+          ),
+      ],
+    );
+  }
+
+  Widget _row(TimelineStep s) {
+    return IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -201,14 +297,7 @@ class _Timeline extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        if (plan.backupGames.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(left: 80, top: 4),
-            child: Text('Backup games if there\'s time: ${plan.backupGames.map((g) => g.name).join(', ')}', style: body(12, color: HC.muted)),
-          ),
-      ],
-    );
+          );
   }
 }
 

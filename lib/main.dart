@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 
 import 'firebase_options.dart';
 import 'screens/home_shell.dart';
+import 'screens/provider_home_screen.dart';
+import 'screens/provider_setup_screen.dart';
 import 'screens/setup_screen.dart';
+import 'services/account_service.dart';
 import 'services/event_store.dart';
 import 'services/search_log.dart';
 import 'state/app_state.dart';
@@ -30,7 +33,7 @@ Future<void> main() async {
     store = LocalEventStore();
   }
 
-  final state = AppState(store, usingCloud: cloud);
+  final state = AppState(store, usingCloud: cloud, accounts: cloud ? AccountService() : null);
   await state.load();
   runApp(HooplaApp(state: state));
 }
@@ -38,6 +41,14 @@ Future<void> main() async {
 class HooplaApp extends StatelessWidget {
   const HooplaApp({super.key, required this.state});
   final AppState state;
+
+  /// Providers see their listing; everyone else plans events.
+  static Widget _home(AppState s) {
+    if (s.isProvider) {
+      return s.provider == null ? const ProviderSetupScreen() : const ProviderHomeScreen();
+    }
+    return s.event == null ? const SetupScreen() : const HomeShell();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +60,7 @@ class HooplaApp extends StatelessWidget {
           title: 'Hoopla',
           debugShowCheckedModeBanner: false,
           theme: buildTheme(),
-          home: state.event == null ? const SetupScreen() : const HomeShell(),
+          home: _home(state),
         ),
       ),
     );

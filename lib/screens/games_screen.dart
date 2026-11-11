@@ -7,6 +7,7 @@ import '../services/search_log.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/locked.dart';
 
 /// Browse games with how-to videos, add them to the plan, and save reels.
 class GamesScreen extends StatefulWidget {
@@ -120,7 +121,11 @@ class _GamesScreenState extends State<GamesScreen> {
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
     final e = state.event!;
-    final games = _games(e);
+    final allGames = _games(e);
+    final premium = state.access == Access.premium;
+    // Guests see 3 games; signing in (free) shows them all.
+    final limited = state.access == Access.guest && allGames.length > 3;
+    final games = limited ? allGames.take(3).toList() : allGames;
     final width = MediaQuery.of(context).size.width;
     final columns = width > 900 ? 4 : (width > 600 ? 3 : 2);
 
@@ -153,7 +158,7 @@ class _GamesScreenState extends State<GamesScreen> {
               const SizedBox(height: 14),
               CardBox(
                 color: HC.ink,
-                onTap: _saveReel,
+                onTap: premium ? _saveReel : () => openUnlock(context, Access.premium),
                 child: Row(
                   children: [
                     Container(
@@ -168,7 +173,12 @@ class _GamesScreenState extends State<GamesScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('Saw a funny game reel?', style: body(14, color: Colors.white, weight: FontWeight.w600)),
-                          Text('Save it to Hoopla — it waits for your next party, so you never forget it.', style: body(12, color: HC.nightMuted)),
+                          Text(
+                            premium
+                                ? 'Save it to Hoopla — it waits for your next party, so you never forget it.'
+                                : 'Premium: save reels to Hoopla so you never forget them at the party.',
+                            style: body(12, color: HC.nightMuted),
+                          ),
                         ],
                       ),
                     ),
@@ -227,6 +237,17 @@ class _GamesScreenState extends State<GamesScreen> {
             ),
           ),
         ),
+        if (limited)
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            sliver: SliverToBoxAdapter(
+              child: LockedCard(
+                needs: Access.member,
+                title: '${allGames.length - games.length} more games picked for your party',
+                message: 'Sign in free to see every game, with how-to videos and what you need.',
+              ),
+            ),
+          ),
       ],
     );
   }

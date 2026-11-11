@@ -24,10 +24,13 @@ class Pill extends StatelessWidget {
         child: Container(
           height: small ? 34 : 40,
           padding: EdgeInsets.symmetric(horizontal: small ? 12 : 16),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: body(small ? 12.5 : 14, color: selected ? Colors.white : HC.ink, weight: selected ? FontWeight.w600 : FontWeight.w500),
+          // widthFactor keeps the chip as wide as its label (not the whole row).
+          child: Center(
+            widthFactor: 1,
+            child: Text(
+              label,
+              style: body(small ? 12.5 : 14, color: selected ? Colors.white : HC.ink, weight: selected ? FontWeight.w600 : FontWeight.w500),
+            ),
           ),
         ),
       ),
