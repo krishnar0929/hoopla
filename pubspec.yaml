@@ -1,7 +1,7 @@
 name: hoopla
 description: Hoopla - plan your event, find nearby helpers, and play games people remember.
 publish_to: 'none'
-version: 0.1.0+3
+version: 0.1.0+4
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
