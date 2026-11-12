@@ -48,7 +48,7 @@ const planOffers = <PlanOffer>[
       'All party games with how-to videos',
       'Budget planner with a suggested split',
       'Party-day mode: timer and team scoreboard',
-      'Save funny game reels from Instagram',
+      'Return gift ideas, party playlist and invite text',
       'Plan several events at once',
     ],
   ),
@@ -423,8 +423,8 @@ class _FreeCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Plan one event with the full timeline and checklist, and browse every game. '
-            'Without an account you see a preview of your plan.',
+            'Plan one event with the full timeline and checklist, browse every game, and save funny game reels '
+            'from Instagram. Without an account you see a preview of your plan.',
             style: body(13, color: HC.nightMuted),
           ),
         ],

@@ -1,9 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../data/games.dart';
 import '../models/event_details.dart';
 import '../services/plan_generator.dart';
 import '../services/search_log.dart';
+import '../services/shared_reels.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -31,10 +34,17 @@ class _GamesScreenState extends State<GamesScreen> {
         _ => gameCatalog.where((g) => g.minutes < 15).toList(),
       };
 
+  /// Save a reel link. Free for everyone. Fills in a copied link automatically.
   Future<void> _saveReel() async {
     final url = TextEditingController();
     final title = TextEditingController();
-    final ok = await showModalBottomSheet<bool>(
+    try {
+      final copied = (await Clipboard.getData(Clipboard.kTextPlain))?.text ?? '';
+      final link = firstLink(copied);
+      if (link != null && isReelLink(link)) url.text = link;
+    } catch (_) {}
+    if (!mounted) return;
+    final save = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: HC.ground,
@@ -47,35 +57,73 @@ class _GamesScreenState extends State<GamesScreen> {
           children: [
             Text('Save a game reel', style: display(22)),
             const SizedBox(height: 4),
-            Text('In Instagram tap Share → Copy link, then paste it here.', style: body(13, color: HC.muted)),
+            Text(
+              url.text.isEmpty
+                  ? 'Paste a link from Instagram, TikTok or YouTube. It waits here for your next party.'
+                  : 'We found the link you copied. Give it a name and save.',
+              style: body(13, color: HC.muted),
+            ),
             const SizedBox(height: 16),
-            TextField(controller: url, autofocus: true, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText: 'Reel or video link')),
+            TextField(
+              controller: url,
+              autofocus: url.text.isEmpty,
+              keyboardType: TextInputType.url,
+              decoration: const InputDecoration(labelText: 'Reel or video link'),
+            ),
             const SizedBox(height: 10),
-            TextField(controller: title, decoration: const InputDecoration(labelText: 'Name it (e.g. "Cup flip race")')),
+            TextField(
+              controller: title,
+              autofocus: url.text.isNotEmpty,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(labelText: 'Name it (optional, e.g. "Cup flip race")'),
+            ),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               height: 50,
               child: FilledButton(
                 style: FilledButton.styleFrom(backgroundColor: HC.violet, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
-                onPressed: () => Navigator.of(ctx).pop(Uri.tryParse(url.text.trim())?.hasScheme ?? false),
-                child: const Text('Save for later'),
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Save for my party'),
               ),
             ),
+            if (!kIsWeb) ...[
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.bolt_rounded, size: 18, color: HC.violet),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Faster: in Instagram tap the share icon on a reel → Share to… → Hoopla. It saves in one tap.',
+                      style: body(12, color: HC.muted),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
     );
-    if (!mounted) return;
-    if (ok == true) {
-      await AppScope.of(context).update((e) => e.savedLinks.insert(
-            0,
-            SavedLink(title: title.text.trim().isEmpty ? 'Saved game' : title.text.trim(), url: url.text.trim()),
-          ));
-      if (mounted) toast(context, 'Saved. It will be here for your next party too.');
-    } else if (ok == false) {
-      toast(context, 'That doesn\'t look like a link. Copy it from the Share menu and try again.');
+    if (!mounted || save != true) return;
+    final link = firstLink(url.text.trim());
+    if (link == null) {
+      toast(context, 'That doesn\'t look like a link. In Instagram tap Share → Copy link, then try again.');
+      return;
     }
+    final name = title.text.trim().isEmpty ? defaultTitle(link) : title.text.trim();
+    final added = await AppScope.of(context).addReels([SavedLink(title: name, url: link)]);
+    if (mounted) toast(context, added == 0 ? 'Already saved.' : 'Saved "$name". It waits here for your party.');
+  }
+
+  /// Share a game on WhatsApp with a link back to Hoopla.
+  void _shareGame(BuildContext ctx, Game g) {
+    final text = 'Party game idea: ${g.name}\n${g.howTo}\n'
+        '${g.needs.isEmpty ? '' : 'You need: ${g.needs.join(', ')}\n'}'
+        '\nMore games and a ready-made party plan: https://hoopla-894ca.web.app';
+    openLink(ctx, Uri.https('wa.me', '/', {'text': text}));
   }
 
   void _showGame(Game g) {
@@ -111,6 +159,17 @@ class _GamesScreenState extends State<GamesScreen> {
                 label: Text('Watch how to play', style: body(14, weight: FontWeight.w600)),
               ),
             ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1FAA59), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                onPressed: () => _shareGame(ctx, g),
+                icon: const Icon(Icons.chat_rounded, size: 20),
+                label: const Text('Share on WhatsApp'),
+              ),
+            ),
           ],
         ),
       ),
@@ -122,7 +181,6 @@ class _GamesScreenState extends State<GamesScreen> {
     final state = AppScope.of(context);
     final e = state.event!;
     final allGames = _games(e);
-    final premium = state.access == Access.premium;
     // Guests see 3 games; signing in (free) shows them all.
     final limited = state.access == Access.guest && allGames.length > 3;
     final games = limited ? allGames.take(3).toList() : allGames;
@@ -158,7 +216,7 @@ class _GamesScreenState extends State<GamesScreen> {
               const SizedBox(height: 14),
               CardBox(
                 color: HC.ink,
-                onTap: premium ? _saveReel : () => openUnlock(context, Access.premium),
+                onTap: _saveReel,
                 child: Row(
                   children: [
                     Container(
@@ -174,9 +232,9 @@ class _GamesScreenState extends State<GamesScreen> {
                         children: [
                           Text('Saw a funny game reel?', style: body(14, color: Colors.white, weight: FontWeight.w600)),
                           Text(
-                            premium
-                                ? 'Save it to Hoopla — it waits for your next party, so you never forget it.'
-                                : 'Basic and up: save reels to Hoopla so you never forget them at the party.',
+                            kIsWeb
+                                ? 'Save it to Hoopla for free. It waits for your next party, so you never forget it.'
+                                : 'Save it free. Tip: in Instagram tap Share → Hoopla to save in one tap.',
                             style: body(12, color: HC.nightMuted),
                           ),
                         ],

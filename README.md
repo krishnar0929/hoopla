@@ -108,6 +108,7 @@ Yearly: $29.99 / $79.99. Prices and features live in `planOffers` in `lib/screen
 
 - **Give someone a plan:** Firestore → `users/{uid}` → add `plan` = `basic` or `pro` (string). Payments come later.
 - **Free trial:** 3 days, one per account (`trialPlan`, `trialStartedAt`, `trialCancelled` on `users/{uid}`, protected by the rules). Cancel from Account. When payments go live, Apple's and Google's 3-day trials take over and renew automatically.
+- **Saved reels (free):** in Instagram/TikTok/YouTube tap Share → Hoopla (iPhone share extension `ios/share_extension`, Android share target in `MainActivity.kt`), or paste a link in Games. Reels saved before an event exists join the next event.
 - **Test plans locally:** debug builds show a "Developer: test a plan" picker at the bottom of the plans page.
 - **Sign in:** Email (everywhere), Google (web), Apple (iPhone). Guests are linked to their new account, so their event comes along.
 - **Roles:** customers plan events; providers publish a listing at `providers/{uid}` shown in Nearby.

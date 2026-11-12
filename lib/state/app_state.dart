@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
@@ -144,9 +146,50 @@ class AppState extends ChangeNotifier {
       for (final t in Tier.values) {
         if (t.name == saved) devTier = t;
       }
+      final raw = prefs.getString(_pendingReelsKey);
+      if (raw != null) {
+        pendingReels = [
+          for (final m in jsonDecode(raw) as List) SavedLink.fromMap(Map<String, dynamic>.from(m as Map)),
+        ];
+      }
     } catch (_) {}
     await _loadAccount();
     await _loadEvents();
+  }
+
+  // ---------- saved reels (free for everyone) ----------
+
+  /// Reels saved before there is an event; they join the next event created.
+  List<SavedLink> pendingReels = [];
+  static const _pendingReelsKey = 'hoopla.pendingReels';
+
+  /// Saves reels to the current event (or keeps them until one exists).
+  /// Returns how many were new.
+  Future<int> addReels(List<SavedLink> reels) async {
+    if (reels.isEmpty) return 0;
+    final e = event;
+    final existing = {for (final l in e?.savedLinks ?? pendingReels) l.url};
+    final fresh = [for (final r in reels) if (existing.add(r.url)) r];
+    if (fresh.isEmpty) return 0;
+    if (e != null) {
+      await update((ev) => ev.savedLinks.insertAll(0, fresh));
+    } else {
+      pendingReels = [...fresh, ...pendingReels];
+      notifyListeners();
+      await _savePendingReels();
+    }
+    return fresh.length;
+  }
+
+  Future<void> _savePendingReels() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (pendingReels.isEmpty) {
+        await prefs.remove(_pendingReelsKey);
+      } else {
+        await prefs.setString(_pendingReelsKey, jsonEncode([for (final l in pendingReels) l.toMap()]));
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadAccount() async {
@@ -184,6 +227,12 @@ class AppState extends ChangeNotifier {
   // ---------- events ----------
 
   Future<void> saveEvent(EventDetails e) async {
+    if (pendingReels.isNotEmpty) {
+      final have = {for (final l in e.savedLinks) l.url};
+      e.savedLinks.insertAll(0, [for (final l in pendingReels) if (have.add(l.url)) l]);
+      pendingReels = [];
+      await _savePendingReels();
+    }
     e.updatedAt = DateTime.now();
     events.removeWhere((x) => x.id == e.id);
     events.insert(0, e);
