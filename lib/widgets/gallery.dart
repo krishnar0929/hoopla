@@ -93,3 +93,19 @@ class _PhotoViewerState extends State<_PhotoViewer> {
     );
   }
 }
+
+const sampleContactNote = 'This is a sample listing to show how Hoopla works. Real providers near you will appear here as they join.';
+
+/// Small "SAMPLE" label on demo listings.
+class SampleTag extends StatelessWidget {
+  const SampleTag({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(color: HC.track, borderRadius: BorderRadius.circular(6)),
+      child: Text('SAMPLE', style: body(10, color: HC.muted, weight: FontWeight.w700)),
+    );
+  }
+}

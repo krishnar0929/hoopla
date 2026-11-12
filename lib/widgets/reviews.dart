@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../data/sample_providers.dart';
 import '../models/provider_profile.dart';
 import '../screens/sign_in_screen.dart';
 import '../services/review_service.dart';
@@ -39,7 +40,9 @@ class RatingBadge extends StatefulWidget {
 }
 
 class _RatingBadgeState extends State<RatingBadge> {
-  late final Future<RatingSummary> future = ReviewService.summary(widget.providerUid).catchError((_) => RatingSummary.none);
+  late final Future<RatingSummary> future = widget.providerUid.startsWith('sample-')
+      ? Future.value(sampleSummaryFor(widget.providerUid))
+      : ReviewService.summary(widget.providerUid).catchError((_) => RatingSummary.none);
 
   @override
   Widget build(BuildContext context) {
@@ -163,7 +166,8 @@ class _ReviewsSectionState extends State<ReviewsSection> {
     future = _load();
   }
 
-  Future<List<Review>> _load() => ReviewService.load(widget.provider.uid);
+  Future<List<Review>> _load() =>
+      widget.provider.isSample ? Future.value(sampleReviewsFor(widget.provider.uid)) : ReviewService.load(widget.provider.uid);
 
   void _refresh() => setState(() => future = _load());
 
@@ -241,7 +245,7 @@ class _ReviewsSectionState extends State<ReviewsSection> {
           if (r.reviewerUid == myUid) mine = r;
         }
         final avg = reviews.isEmpty ? 0.0 : reviews.fold<int>(0, (a, r) => a + r.stars) / reviews.length;
-        final canWrite = !widget.ownListing && myUid != widget.provider.uid;
+        final canWrite = !widget.ownListing && myUid != widget.provider.uid && !widget.provider.isSample;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

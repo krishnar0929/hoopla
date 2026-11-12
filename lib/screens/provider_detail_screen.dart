@@ -20,6 +20,11 @@ class ProviderDetailScreen extends StatelessWidget {
     final p = provider;
     final digits = p.phoneDigits;
     final hasPhone = digits.isNotEmpty;
+    VoidCallback? contact(VoidCallback action) {
+      if (p.isSample) return () => toast(context, sampleContactNote);
+      return hasPhone ? action : null;
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text(p.serviceType)),
       body: Center(
@@ -28,6 +33,24 @@ class ProviderDetailScreen extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
             children: [
+              if (p.isSample)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: HC.track, borderRadius: BorderRadius.circular(14)),
+                  child: Row(
+                    children: [
+                      const Text('👀', style: TextStyle(fontSize: 20)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'This is a sample listing, so you can see how Hoopla works. Real providers near you will look just like this.',
+                          style: body(13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               if (p.photos.isNotEmpty)
                 GestureDetector(
                   onTap: () => openPhotoViewer(context, p.photos, 0),
@@ -52,17 +75,17 @@ class ProviderDetailScreen extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _Action(icon: Icons.call_outlined, label: 'Call', onTap: hasPhone ? () => openLink(context, Uri(scheme: 'tel', path: digits)) : null),
+                  _Action(icon: Icons.call_outlined, label: 'Call', onTap: contact(() => openLink(context, Uri(scheme: 'tel', path: digits)))),
                   _Action(
                     icon: Icons.chat_outlined,
                     label: 'WhatsApp',
-                    onTap: hasPhone ? () => openLink(context, Uri.https('wa.me', '/$digits', {'text': quote})) : null,
+                    onTap: contact(() => openLink(context, Uri.https('wa.me', '/$digits', {'text': quote}))),
                   ),
                   _Action(
                     icon: Icons.request_quote_outlined,
                     label: 'Get quote',
                     dark: true,
-                    onTap: hasPhone ? () => openLink(context, Uri(scheme: 'sms', path: digits, queryParameters: {'body': quote})) : null,
+                    onTap: contact(() => openLink(context, Uri(scheme: 'sms', path: digits, queryParameters: {'body': quote}))),
                   ),
                 ],
               ),

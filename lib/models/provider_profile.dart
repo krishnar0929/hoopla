@@ -69,6 +69,9 @@ class ProviderProfile {
   Uri? get tiktokUrl => socialUrl(tiktok, 'www.tiktok.com', '@');
   Uri? get reviewsUrl => reviewsLink.isEmpty ? null : Uri.tryParse(reviewsLink.startsWith('http') ? reviewsLink : 'https://$reviewsLink');
 
+  /// A built-in sample listing (lib/data/sample_providers.dart), not a real business.
+  bool get isSample => uid.startsWith('sample-');
+
   /// True when the listing links anywhere outside Hoopla.
   bool get hasSocial => [instagramUrl, facebookUrl, youtubeUrl, tiktokUrl, reviewsUrl, websiteUrl].any((u) => u != null);
 
