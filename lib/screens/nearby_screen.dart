@@ -108,10 +108,10 @@ class _NearbyScreenState extends State<NearbyScreen> {
   @override
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
-    if (state.access != Access.premium) {
+    if (!state.atLeast(Tier.pro)) {
       return const LockedPage(
-        title: 'Find nearby helpers',
-        message: 'Photographers, decorators, panthulu, cake makers and more for your event, all in one place.',
+        title: 'Find nearby professionals',
+        message: 'Part of Pro (\$9.99/month): photographers, decorators, panthulu, cake makers and more for your event, all in one place.',
         points: [
           'Browse providers by service, with prices and verified badges',
           'Call or WhatsApp in one tap',

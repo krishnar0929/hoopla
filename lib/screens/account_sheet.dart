@@ -82,11 +82,12 @@ class _AccountSheet extends StatelessWidget {
         Text(state.email ?? 'Signed in', style: body(15, weight: FontWeight.w600)),
         const SizedBox(height: 2),
         Text(
-          '${state.isProvider ? 'Provider' : 'Customer'} · ${state.isPremium ? 'Premium' : 'Free plan'}',
+          '${state.isProvider ? 'Provider' : 'Customer'} · ${state.tier.label} plan',
           style: body(13, color: HC.muted),
         ),
         const SizedBox(height: 16),
-        if (!state.isPremium) _SheetButton(label: 'See Premium', filled: true, onTap: () => open(const UpgradeScreen())),
+        if (state.tier != Tier.host)
+          _SheetButton(label: state.isPremium ? 'Change plan' : 'See plans', filled: true, onTap: () => open(const UpgradeScreen())),
         if (!state.isProvider)
           _SheetButton(
             label: 'Offer a service? Become a provider',

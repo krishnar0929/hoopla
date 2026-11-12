@@ -138,7 +138,7 @@ class _PlanScreenState extends State<PlanScreen> {
                 : const LockedCard(
                     needs: Access.premium,
                     title: 'Budget planner',
-                    message: 'Premium splits your budget into food, decor, photos, cake and return gifts.',
+                    message: 'Basic and up split your budget into food, decor, photos, cake and return gifts.',
                   ),
           },
         ),

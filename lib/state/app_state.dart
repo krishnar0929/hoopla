@@ -9,8 +9,20 @@ import '../services/account_service.dart';
 import '../services/event_store.dart';
 import '../services/plan_generator.dart';
 
-/// What the person can see: guest (no account), member (free account) or premium.
+/// What the person can see: guest (no account), member (free account) or premium (any paid plan).
 enum Access { guest, member, premium }
+
+/// Subscription plans, lowest to highest. Each includes everything below it.
+enum Tier { free, basic, pro, host }
+
+extension TierLabel on Tier {
+  String get label => switch (this) {
+        Tier.free => 'Free',
+        Tier.basic => 'Basic',
+        Tier.pro => 'Pro',
+        Tier.host => 'Host',
+      };
+}
 
 /// Holds the events, the signed-in account, and saves every change.
 class AppState extends ChangeNotifier {
@@ -36,9 +48,9 @@ class AppState extends ChangeNotifier {
   /// providers/{uid} when the user is a provider.
   ProviderProfile? provider;
 
-  /// Test switch for Premium. Only works in debug builds.
-  bool devPremium = false;
-  static const _devPremiumKey = 'hoopla.devPremium';
+  /// Test switch for plans. Only works in debug builds.
+  Tier? devTier;
+  static const _devTierKey = 'hoopla.devTier';
 
   Plan get plan => PlanGenerator.build(event!);
 
@@ -51,7 +63,21 @@ class AppState extends ChangeNotifier {
   UserRole get role => profile?['role'] == 'provider' ? UserRole.provider : UserRole.customer;
   bool get isProvider => isSignedIn && role == UserRole.provider;
 
-  bool get isPremium => (kDebugMode && devPremium) || (isSignedIn && profile?['premium'] == true);
+  /// The plan from users/{uid}.plan ('basic', 'pro', 'host'), set by you or later by payments.
+  Tier get tier {
+    if (kDebugMode && devTier != null) return devTier!;
+    if (!isSignedIn) return Tier.free;
+    final name = profile?['plan'];
+    for (final t in Tier.values) {
+      if (t.name == name) return t;
+    }
+    if (profile?['premium'] == true) return Tier.host;
+    return Tier.free;
+  }
+
+  bool atLeast(Tier t) => tier.index >= t.index;
+
+  bool get isPremium => atLeast(Tier.basic);
 
   Access get access {
     if (isPremium) return Access.premium;
@@ -66,7 +92,10 @@ class AppState extends ChangeNotifier {
   Future<void> load() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      devPremium = prefs.getBool(_devPremiumKey) ?? false;
+      final saved = prefs.getString(_devTierKey);
+      for (final t in Tier.values) {
+        if (t.name == saved) devTier = t;
+      }
     } catch (_) {}
     await _loadAccount();
     await _loadEvents();
@@ -245,12 +274,17 @@ class AppState extends ChangeNotifier {
     return null;
   }
 
-  Future<void> setDevPremium(bool on) async {
-    devPremium = on;
+  /// Debug builds only: pretend to be on a plan for testing (null = use the real plan).
+  Future<void> setDevTier(Tier? t) async {
+    devTier = t;
     notifyListeners();
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_devPremiumKey, on);
+      if (t == null) {
+        await prefs.remove(_devTierKey);
+      } else {
+        await prefs.setString(_devTierKey, t.name);
+      }
     } catch (_) {}
   }
 }

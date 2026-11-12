@@ -60,7 +60,7 @@ class LockedCard extends StatelessWidget {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
               onPressed: () => openUnlock(context, needs),
-              child: Text(premium ? 'See Premium' : 'Sign in free', style: body(14, color: Colors.white, weight: FontWeight.w600)),
+              child: Text(premium ? 'See plans' : 'Sign in free', style: body(14, color: Colors.white, weight: FontWeight.w600)),
             ),
           ),
         ],
@@ -128,7 +128,7 @@ class LockedPage extends StatelessWidget {
             ),
             onPressed: () => openUnlock(context, needs),
             child: Text(
-              needs == Access.premium ? 'See Premium' : 'Sign in free',
+              needs == Access.premium ? 'See plans' : 'Sign in free',
               style: display(17, color: dark ? HC.ink : Colors.white),
             ),
           ),

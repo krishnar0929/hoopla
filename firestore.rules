@@ -9,13 +9,16 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
-    // Profile: role, name, email. `premium` is set only by you in the console
-    // (later by the payment system), never by the app.
+    // Profile: role, name, email. `plan` ('basic' | 'pro' | 'host') and `premium` are set
+    // only by you in the console (later by the payment system), never by the app.
     match /users/{uid} {
       allow read, delete: if isOwner(uid);
-      allow create: if isOwner(uid) && !('premium' in request.resource.data);
+      allow create: if isOwner(uid)
+        && !('premium' in request.resource.data)
+        && !('plan' in request.resource.data);
       allow update: if isOwner(uid)
-        && request.resource.data.get('premium', null) == resource.data.get('premium', null);
+        && request.resource.data.get('premium', null) == resource.data.get('premium', null)
+        && request.resource.data.get('plan', null) == resource.data.get('plan', null);
 
       // Each person can only read and write their own events.
       match /events/{eventId} {

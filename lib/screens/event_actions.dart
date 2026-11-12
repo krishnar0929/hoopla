@@ -29,7 +29,7 @@ Future<void> startNewEvent(BuildContext context) async {
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx, 'replace'), child: const Text('Replace it')),
-        FilledButton(onPressed: () => Navigator.pop(ctx, 'upgrade'), child: const Text('See Premium')),
+        FilledButton(onPressed: () => Navigator.pop(ctx, 'upgrade'), child: const Text('See plans')),
       ],
     ),
   );

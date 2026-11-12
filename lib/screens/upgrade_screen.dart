@@ -6,42 +6,123 @@ import '../theme.dart';
 import '../widgets/common.dart';
 import 'sign_in_screen.dart';
 
-/// Hoopla Premium: what it unlocks and the plans.
-/// Payments are not connected yet; tapping a plan says so.
-class UpgradeScreen extends StatelessWidget {
+/// One paid plan as shown on the subscription page. Edit prices and features here.
+class PlanOffer {
+  const PlanOffer({
+    required this.tier,
+    required this.tagline,
+    required this.monthly,
+    required this.yearly,
+    required this.features,
+    this.includes,
+    this.badge,
+    this.comingSoon,
+  });
+
+  final Tier tier;
+  final String tagline;
+  final double monthly;
+  final double yearly;
+  final List<String> features;
+
+  /// "Everything in Basic, plus:"
+  final String? includes;
+  final String? badge;
+
+  /// Shown under the features when part of the plan isn't built yet.
+  final String? comingSoon;
+
+  /// Percent saved by paying yearly instead of 12 months.
+  int get yearlySavings => (100 - yearly / (monthly * 12) * 100).round();
+}
+
+const planOffers = <PlanOffer>[
+  PlanOffer(
+    tier: Tier.basic,
+    tagline: 'Plan a party without the stress',
+    monthly: 3.99,
+    yearly: 29.99,
+    features: [
+      'Full timeline and checklist with due dates',
+      'All party games with how-to videos',
+      'Budget planner with a suggested split',
+      'Party-day mode: timer and team scoreboard',
+      'Save funny game reels from Instagram',
+      'Plan several events at once',
+    ],
+  ),
+  PlanOffer(
+    tier: Tier.pro,
+    tagline: 'Find the right people for your event',
+    monthly: 9.99,
+    yearly: 79.99,
+    badge: 'Most popular',
+    includes: 'Everything in Basic, plus:',
+    features: [
+      'Find photographers, decorators, panthulu, cake makers and more nearby',
+      'Compare ratings, reviews and prices',
+      'Call, WhatsApp and request quotes in one tap',
+      'Message providers in the app',
+      'Send booking requests',
+    ],
+    comingSoon: 'In-app messages and booking requests arrive in an upcoming update.',
+  ),
+  PlanOffer(
+    tier: Tier.host,
+    tagline: 'Invite everyone and track who\'s coming',
+    monthly: 14.99,
+    yearly: 119.99,
+    includes: 'Everything in Pro, plus:',
+    features: [
+      'Pick guests straight from your phone contacts',
+      'Send invites by text message and email',
+      'Share invites to WhatsApp chats and groups',
+      'RSVP tracking with a live guest count',
+      'Automatic reminders before the party',
+      'Custom invitation cards',
+    ],
+    comingSoon: 'Invites arrive in an upcoming update.',
+  ),
+];
+
+/// Subscription page: Basic, Pro and Host, monthly or yearly.
+/// Payments are not connected yet; choosing a plan says so.
+class UpgradeScreen extends StatefulWidget {
   const UpgradeScreen({super.key});
 
-  static const _benefits = [
-    (Icons.place_outlined, 'Find nearby photographers, decorators, panthulu and more'),
-    (Icons.chat_outlined, 'Call, WhatsApp and request quotes in one tap'),
-    (Icons.celebration_outlined, 'Party-day mode with timer and team scoreboard'),
-    (Icons.account_balance_wallet_outlined, 'Budget planner with a suggested split'),
-    (Icons.bookmark_border_rounded, 'Save funny game reels from Instagram'),
-    (Icons.event_note_outlined, 'Plan several events at once'),
-  ];
+  @override
+  State<UpgradeScreen> createState() => _UpgradeScreenState();
+}
 
-  Future<void> _choose(BuildContext context, String plan) async {
+class _UpgradeScreenState extends State<UpgradeScreen> {
+  bool yearly = false;
+
+  Future<void> _choose(PlanOffer offer) async {
     final state = AppScope.of(context);
     final nav = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     if (!state.isSignedIn) {
       final ok = await nav.push<bool>(MaterialPageRoute(
-        builder: (_) => const SignInScreen(reason: 'Sign in first so Premium stays with your account on every device.'),
+        builder: (_) => const SignInScreen(reason: 'Sign in first so your plan stays with your account on every device.'),
       ));
       if (ok != true) return;
     }
-    messenger.showSnackBar(SnackBar(content: Text('Payments are coming soon. $plan will be ready in the next update.')));
+    final price = yearly ? '\$${offer.yearly.toStringAsFixed(2)}/year' : '\$${offer.monthly.toStringAsFixed(2)}/month';
+    messenger.showSnackBar(SnackBar(
+      content: Text('Payments are coming soon. ${offer.tier.label} ($price) will be ready in the next update.'),
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
+    final current = state.tier;
     return Scaffold(
       backgroundColor: HC.ink,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
+            constraints: const BoxConstraints(maxWidth: 560),
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
               children: [
@@ -53,74 +134,44 @@ class UpgradeScreen extends StatelessWidget {
                     icon: const Icon(Icons.close_rounded, color: Colors.white),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text('Hoopla Premium', style: display(34, color: Colors.white)),
+                const SizedBox(height: 4),
+                Text('Choose your plan', style: display(32, color: Colors.white)),
                 const SizedBox(height: 6),
-                Text('Everything you need for a party people remember.', style: body(15, color: HC.nightMuted)),
-                if (state.isPremium) ...[
-                  const SizedBox(height: 16),
-                  CardBox(
-                    color: HC.lime,
-                    child: Row(
-                      children: [
-                        const Icon(Icons.workspace_premium_rounded, color: HC.ink),
-                        const SizedBox(width: 10),
-                        Expanded(child: Text('You\'re on Premium. Everything is unlocked.', style: body(14, weight: FontWeight.w600))),
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 22),
-                for (final b in _benefits)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(color: HC.nightCard, borderRadius: BorderRadius.circular(10)),
-                          child: Icon(b.$1, color: HC.lime, size: 20),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(child: Text(b.$2, style: body(15, color: Colors.white))),
-                      ],
-                    ),
-                  ),
-                const SizedBox(height: 10),
-                _PlanCard(
-                  name: 'Party Pass',
-                  price: '\$4.99',
-                  detail: 'One event, everything unlocked until the party is over.',
-                  onTap: () => _choose(context, 'Party Pass'),
-                ),
-                const SizedBox(height: 10),
-                _PlanCard(
-                  name: 'Yearly',
-                  price: '\$19.99',
-                  detail: 'Unlimited events for 12 months.',
-                  badge: 'Best value',
-                  onTap: () => _choose(context, 'Yearly'),
-                ),
-                const SizedBox(height: 14),
                 Text(
-                  'Payments are coming soon. Prices may change before launch.',
+                  current == Tier.free
+                      ? 'Start free. Upgrade when you need more for your party.'
+                      : 'You\'re on ${current.label}. Switch anytime.',
+                  style: body(15, color: HC.nightMuted),
+                ),
+                const SizedBox(height: 18),
+                _BillingToggle(
+                  yearly: yearly,
+                  onChanged: (v) => setState(() => yearly = v),
+                ),
+                const SizedBox(height: 18),
+                for (final offer in planOffers) ...[
+                  _PlanCard(
+                    offer: offer,
+                    yearly: yearly,
+                    current: offer.tier == current,
+                    onChoose: () => _choose(offer),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                _FreeCard(current: current == Tier.free),
+                const SizedBox(height: 16),
+                Text(
+                  'Prices in USD. Cancel anytime in your App Store or Google Play settings. Payments are coming soon.',
                   textAlign: TextAlign.center,
                   style: body(12, color: HC.nightMuted),
                 ),
+                TextButton(
+                  onPressed: () => toast(context, 'Restore purchases will work once payments are live.'),
+                  child: Text('Restore purchases', style: body(13, color: Colors.white, weight: FontWeight.w600)),
+                ),
                 if (kDebugMode) ...[
-                  const SizedBox(height: 22),
-                  CardBox(
-                    color: HC.nightCard,
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    child: SwitchListTile(
-                      value: state.devPremium,
-                      onChanged: state.setDevPremium,
-                      activeColor: HC.lime,
-                      title: Text('Developer: Premium on this device', style: body(14, color: Colors.white, weight: FontWeight.w600)),
-                      subtitle: Text('Only in debug builds, for testing. Hidden in TestFlight and the App Store.', style: body(12, color: HC.nightMuted)),
-                    ),
-                  ),
+                  const SizedBox(height: 10),
+                  _DevTierPicker(state: state),
                 ],
               ],
             ),
@@ -131,46 +182,222 @@ class UpgradeScreen extends StatelessWidget {
   }
 }
 
+class _BillingToggle extends StatelessWidget {
+  const _BillingToggle({required this.yearly, required this.onChanged});
+  final bool yearly;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget option(String label, bool value, {String? note}) {
+      final selected = yearly == value;
+      return Expanded(
+        child: GestureDetector(
+          onTap: () => onChanged(value),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            height: 46,
+            decoration: BoxDecoration(
+              color: selected ? HC.card : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Semantics(
+              button: true,
+              selected: selected,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(label, style: body(15, weight: FontWeight.w600, color: selected ? HC.ink : Colors.white)),
+                  if (note != null) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(color: HC.lime, borderRadius: BorderRadius.circular(6)),
+                      child: Text(note, style: body(11, weight: FontWeight.w700)),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(color: HC.nightCard, borderRadius: BorderRadius.circular(16)),
+      child: Row(
+        children: [
+          option('Monthly', false),
+          option('Yearly', true, note: 'Save up to 37%'),
+        ],
+      ),
+    );
+  }
+}
+
 class _PlanCard extends StatelessWidget {
-  const _PlanCard({required this.name, required this.price, required this.detail, required this.onTap, this.badge});
-  final String name;
-  final String price;
-  final String detail;
-  final String? badge;
-  final VoidCallback onTap;
+  const _PlanCard({required this.offer, required this.yearly, required this.current, required this.onChoose});
+  final PlanOffer offer;
+  final bool yearly;
+  final bool current;
+  final VoidCallback onChoose;
+
+  @override
+  Widget build(BuildContext context) {
+    final highlight = offer.badge != null;
+    final price = yearly ? offer.yearly : offer.monthly;
+    final perMonth = offer.yearly / 12;
+    return Container(
+      decoration: BoxDecoration(
+        color: HC.card,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: highlight ? HC.lime : HC.card, width: 3),
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(offer.tier.label, style: display(24)),
+              const SizedBox(width: 8),
+              if (offer.badge != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(color: HC.lime, borderRadius: BorderRadius.circular(8)),
+                  child: Text(offer.badge!, style: body(11, weight: FontWeight.w700)),
+                ),
+              const Spacer(),
+              if (current)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(color: HC.track, borderRadius: BorderRadius.circular(8)),
+                  child: Text('Your plan', style: body(11, weight: FontWeight.w700)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(offer.tagline, style: body(14, color: HC.muted)),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('\$${price.toStringAsFixed(2)}', style: display(34, color: HC.violet)),
+              const SizedBox(width: 4),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(yearly ? '/ year' : '/ month', style: body(14, color: HC.muted)),
+              ),
+            ],
+          ),
+          if (yearly)
+            Text(
+              '\$${perMonth.toStringAsFixed(2)} a month · save ${offer.yearlySavings}%',
+              style: body(13, color: HC.muted, weight: FontWeight.w500),
+            ),
+          const SizedBox(height: 14),
+          if (offer.includes != null) ...[
+            Text(offer.includes!, style: body(13, weight: FontWeight.w600)),
+            const SizedBox(height: 8),
+          ],
+          for (final f in offer.features)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.check_circle_rounded, size: 18, color: HC.violet),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(f, style: body(14))),
+                ],
+              ),
+            ),
+          if (offer.comingSoon != null) ...[
+            const SizedBox(height: 2),
+            Text(offer.comingSoon!, style: body(12, color: HC.muted)),
+          ],
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: highlight ? HC.violet : HC.ink,
+                disabledBackgroundColor: HC.track,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              onPressed: current ? null : onChoose,
+              child: Text(
+                current ? 'Current plan' : 'Choose ${offer.tier.label}',
+                style: body(15, weight: FontWeight.w600, color: current ? HC.muted : Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FreeCard extends StatelessWidget {
+  const _FreeCard({required this.current});
+  final bool current;
 
   @override
   Widget build(BuildContext context) {
     return CardBox(
-      color: HC.card,
-      onTap: onTap,
+      color: HC.nightCard,
       padding: const EdgeInsets.all(16),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(name, style: display(19)),
-                    if (badge != null) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(color: HC.lime, borderRadius: BorderRadius.circular(8)),
-                        child: Text(badge!, style: body(11, weight: FontWeight.w700)),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(detail, style: body(13, color: HC.muted)),
-              ],
-            ),
+          Row(
+            children: [
+              Text('Free', style: display(20, color: Colors.white)),
+              const Spacer(),
+              if (current) Text('Your plan', style: body(12, color: HC.lime, weight: FontWeight.w700)),
+            ],
           ),
-          const SizedBox(width: 12),
-          Text(price, style: display(22, color: HC.violet)),
+          const SizedBox(height: 6),
+          Text(
+            'Plan one event with the full timeline and checklist, and browse every game. '
+            'Without an account you see a preview of your plan.',
+            style: body(13, color: HC.nightMuted),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Debug builds only: try each plan without paying.
+class _DevTierPicker extends StatelessWidget {
+  const _DevTierPicker({required this.state});
+  final AppState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return CardBox(
+      color: HC.nightCard,
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Developer: test a plan on this device', style: body(14, color: Colors.white, weight: FontWeight.w600)),
+          const SizedBox(height: 2),
+          Text('Only in debug builds. Hidden in TestFlight, the App Store and the live website.', style: body(12, color: HC.nightMuted)),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              Pill(label: 'Real plan', small: true, selected: state.devTier == null, selectedColor: HC.violet, onTap: () => state.setDevTier(null)),
+              for (final t in Tier.values)
+                Pill(label: t.label, small: true, selected: state.devTier == t, selectedColor: HC.violet, onTap: () => state.setDevTier(t)),
+            ],
+          ),
         ],
       ),
     );

@@ -176,7 +176,7 @@ class _GamesScreenState extends State<GamesScreen> {
                           Text(
                             premium
                                 ? 'Save it to Hoopla — it waits for your next party, so you never forget it.'
-                                : 'Premium: save reels to Hoopla so you never forget them at the party.',
+                                : 'Basic and up: save reels to Hoopla so you never forget them at the party.',
                             style: body(12, color: HC.nightMuted),
                           ),
                         ],
