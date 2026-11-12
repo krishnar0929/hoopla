@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../models/provider_profile.dart';
 import 'event_store.dart';
@@ -42,7 +43,7 @@ class AccountService {
     await _auth.currentUser?.reload();
   }
 
-  /// Google: browser pop-up on the web.
+  /// Google: browser pop-up on the web, Google's sign-in sheet on iPhone.
   Future<void> googleSignIn() async {
     final provider = GoogleAuthProvider()..addScope('email');
     if (kIsWeb) {
@@ -61,7 +62,24 @@ class AccountService {
         await _auth.signInWithPopup(provider);
       }
     } else {
-      await _linkOrSignIn(provider);
+      final account = await GoogleSignIn(scopes: const ['email']).signIn();
+      if (account == null) throw FirebaseAuthException(code: 'canceled');
+      final tokens = await account.authentication;
+      final credential = GoogleAuthProvider.credential(idToken: tokens.idToken, accessToken: tokens.accessToken);
+      final current = user;
+      if (current != null && current.isAnonymous) {
+        try {
+          await current.linkWithCredential(credential);
+        } on FirebaseAuthException catch (e) {
+          if (e.code == 'credential-already-in-use') {
+            await _auth.signInWithCredential(e.credential ?? credential);
+          } else {
+            rethrow;
+          }
+        }
+      } else {
+        await _auth.signInWithCredential(credential);
+      }
     }
     await _auth.currentUser?.reload();
   }
@@ -96,6 +114,12 @@ class AccountService {
 
   /// Back to a fresh guest.
   Future<void> signOut() async {
+    if (!kIsWeb) {
+      try {
+        // So the Google account chooser shows next time.
+        await GoogleSignIn().signOut();
+      } catch (_) {}
+    }
     await _auth.signOut();
     await _auth.signInAnonymously();
   }

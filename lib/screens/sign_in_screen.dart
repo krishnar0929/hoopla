@@ -29,7 +29,7 @@ class _SignInScreenState extends State<SignInScreen> {
   String? error;
 
   bool get _showApple => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-  bool get _showGoogle => kIsWeb;
+  bool get _showGoogle => kIsWeb || defaultTargetPlatform == TargetPlatform.iOS;
 
   @override
   void dispose() {
