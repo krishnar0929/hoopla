@@ -138,3 +138,16 @@ Every extra friend adds another week on the end.
 - After a couple of party-mode games finish, Hoopla asks "Enjoying Hoopla?" once.
 
 Deploy the rules after pulling: `firebase deploy --only firestore:rules`.
+
+## Provider photo gallery
+
+Providers add up to 12 photos of their work (plus their Instagram and website) when they set up
+or edit their listing. Customers see the photos on each provider in Nearby and on the provider's
+full page, and can open them full screen.
+
+Photos are stored in Firebase Storage at `providers/{uid}/gallery/`. One-time setup:
+
+1. Firebase console → Build → Storage → Get started (needs the Blaze plan on new projects).
+2. `firebase deploy --only storage`
+3. For the web app to show photos: `gsutil cors set cors.json gs://BUCKET` (the bucket name is
+   `storageBucket` in `lib/firebase_options.dart`).

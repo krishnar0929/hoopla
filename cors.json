@@ -1,0 +1,7 @@
+[
+  {
+    "origin": ["https://hoopla-894ca.web.app", "https://hoopla-894ca.firebaseapp.com", "http://localhost"],
+    "method": ["GET"],
+    "maxAgeSeconds": 3600
+  }
+]

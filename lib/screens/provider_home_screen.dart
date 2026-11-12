@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../models/provider_profile.dart';
 import '../services/account_service.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/gallery.dart';
 import 'account_sheet.dart';
 import 'provider_setup_screen.dart';
 
@@ -63,6 +65,51 @@ class ProviderHomeScreen extends StatelessWidget {
                         onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ProviderSetupScreen(existing: p))),
                         icon: const Icon(Icons.edit_outlined, size: 18, color: HC.ink),
                         label: Text('Edit listing', style: body(14, weight: FontWeight.w600)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                CardBox(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(child: Text('Your work', style: display(18, weight: FontWeight.w600))),
+                          Text('${p.photos.length}/${ProviderProfile.maxPhotos}', style: body(12, color: HC.muted)),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      if (p.photos.isEmpty)
+                        Text(
+                          'Listings with photos get far more calls. Add photos of your best work so customers can see your style.',
+                          style: body(13, color: HC.muted),
+                        )
+                      else
+                        PhotoGrid(photos: p.photos),
+                      if (p.instagramUrl != null) ...[
+                        const SizedBox(height: 10),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: () => openLink(context, p.instagramUrl!),
+                            icon: const Icon(Icons.camera_alt_outlined, size: 18),
+                            label: Text('@${p.instagram} on Instagram'),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 6),
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: HC.violet,
+                          minimumSize: const Size(0, 44),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ProviderSetupScreen(existing: p))),
+                        icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
+                        label: Text(p.photos.isEmpty ? 'Add photos of your work' : 'Edit photos', style: body(14, color: Colors.white, weight: FontWeight.w600)),
                       ),
                     ],
                   ),

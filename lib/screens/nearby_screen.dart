@@ -11,7 +11,9 @@ import '../services/search_log.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/gallery.dart';
 import '../widgets/locked.dart';
+import 'provider_detail_screen.dart';
 
 /// Find photographers, panthulu, decorators and more, and keep a shortlist.
 class NearbyScreen extends StatefulWidget {
@@ -388,19 +390,46 @@ class _ProviderCard extends StatelessWidget {
     final saved = e.shortlist.any((v) => v.id == p.uid);
     final details = [p.city, if (p.priceRange.isNotEmpty) p.priceRange].join(' · ');
 
+    void openDetails() => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => ProviderDetailScreen(provider: p, quote: quote)),
+        );
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: CardBox(
         padding: const EdgeInsets.all(10),
-        child: Row(
+        onTap: openDetails,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (p.photos.length > 1) ...[
+              SizedBox(
+                height: 92,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: p.photos.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 6),
+                  itemBuilder: (context, i) => GestureDetector(
+                    onTap: () => openPhotoViewer(context, p.photos, i),
+                    child: SizedBox(width: 92, child: GalleryImage(p.photos[i], radius: 12)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+            Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
+            SizedBox(
               width: 76,
               height: 76,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(color: tile, borderRadius: BorderRadius.circular(14)),
-              child: Text(p.businessName.isEmpty ? '?' : p.businessName[0].toUpperCase(), style: display(28)),
+              child: p.photos.isNotEmpty
+                  ? GalleryImage(p.photos.first, radius: 14)
+                  : Container(
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(color: tile, borderRadius: BorderRadius.circular(14)),
+                      child: Text(p.businessName.isEmpty ? '?' : p.businessName[0].toUpperCase(), style: display(28)),
+                    ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -449,11 +478,14 @@ class _ProviderCard extends StatelessWidget {
                                   note: p.priceRange,
                                 ))),
                       ),
+                      _SmallButton(label: p.photos.isEmpty ? 'Details' : 'See work', onTap: openDetails),
                     ],
                   ),
                 ],
               ),
             ),
+          ],
+        ),
           ],
         ),
       ),

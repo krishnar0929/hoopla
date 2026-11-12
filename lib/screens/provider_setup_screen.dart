@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../data/helpers.dart';
 import '../models/provider_profile.dart';
 import '../services/account_service.dart';
+import '../services/gallery_service.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/gallery.dart';
 import 'account_sheet.dart';
 
 /// A provider creates or edits their public listing.
@@ -24,7 +27,16 @@ class _ProviderSetupScreenState extends State<ProviderSetupScreen> {
   late final TextEditingController phoneCtrl;
   late final TextEditingController priceCtrl;
   late final TextEditingController aboutCtrl;
+  late final TextEditingController instaCtrl;
+  late final TextEditingController webCtrl;
   late String serviceType;
+
+  /// Work photos (download links). The first one is the cover.
+  late List<String> photos;
+
+  /// Photos removed here; deleted from storage once the listing is saved.
+  final List<String> removed = [];
+  int uploading = 0;
   bool saving = false;
   String? error;
 
@@ -37,6 +49,9 @@ class _ProviderSetupScreenState extends State<ProviderSetupScreen> {
     phoneCtrl = TextEditingController(text: p?.phone ?? '');
     priceCtrl = TextEditingController(text: p?.priceRange ?? '');
     aboutCtrl = TextEditingController(text: p?.about ?? '');
+    instaCtrl = TextEditingController(text: p?.instagram ?? '');
+    webCtrl = TextEditingController(text: p?.website ?? '');
+    photos = List.of(p?.photos ?? const <String>[]);
     serviceType = p?.serviceType ?? helperCategories.first.label;
   }
 
@@ -47,8 +62,53 @@ class _ProviderSetupScreenState extends State<ProviderSetupScreen> {
     phoneCtrl.dispose();
     priceCtrl.dispose();
     aboutCtrl.dispose();
+    instaCtrl.dispose();
+    webCtrl.dispose();
     super.dispose();
   }
+
+  Future<void> _addPhotos() async {
+    final room = ProviderProfile.maxPhotos - photos.length - uploading;
+    if (room <= 0) {
+      toast(context, 'You can show up to ${ProviderProfile.maxPhotos} photos. Remove one to add another.');
+      return;
+    }
+    List<XFile> files;
+    try {
+      files = await GalleryService.pick(limit: room);
+    } catch (e) {
+      if (mounted) toast(context, 'Could not open your photos. Check Hoopla\'s photo access in Settings.');
+      return;
+    }
+    if (files.isEmpty || !mounted) return;
+    setState(() => uploading += files.length);
+    var failed = 0;
+    String? reason;
+    for (final f in files) {
+      try {
+        final url = await GalleryService.upload(f);
+        if (mounted) setState(() => photos.add(url));
+      } catch (e) {
+        failed++;
+        reason ??= '$e';
+      } finally {
+        if (mounted) setState(() => uploading--);
+      }
+    }
+    if (failed > 0 && mounted) {
+      toast(context, failed == files.length ? 'Upload failed: $reason' : '$failed photo${failed == 1 ? '' : 's'} didn\'t upload. Try again.');
+    }
+  }
+
+  void _removePhoto(String url) => setState(() {
+        photos.remove(url);
+        removed.add(url);
+      });
+
+  void _makeCover(String url) => setState(() {
+        photos.remove(url);
+        photos.insert(0, url);
+      });
 
   Future<void> _save() async {
     final state = AppScope.of(context);
@@ -59,6 +119,10 @@ class _ProviderSetupScreenState extends State<ProviderSetupScreen> {
     }
     if (nameCtrl.text.trim().isEmpty || cityCtrl.text.trim().isEmpty || phoneCtrl.text.replaceAll(RegExp(r'[^0-9]'), '').length < 7) {
       setState(() => error = 'Add your business name, city and a phone number.');
+      return;
+    }
+    if (uploading > 0) {
+      setState(() => error = 'Wait for your photos to finish uploading.');
       return;
     }
     final nav = Navigator.of(context);
@@ -75,7 +139,14 @@ class _ProviderSetupScreenState extends State<ProviderSetupScreen> {
         phone: phoneCtrl.text.trim(),
         priceRange: priceCtrl.text.trim(),
         about: aboutCtrl.text.trim(),
+        photos: photos,
+        instagram: cleanInstagram(instaCtrl.text),
+        website: webCtrl.text.trim(),
       ));
+      for (final url in removed) {
+        GalleryService.delete(url);
+      }
+      removed.clear();
       if (nav.canPop()) nav.pop();
     } catch (e) {
       if (mounted) setState(() => error = 'Could not save: $e');
@@ -151,8 +222,36 @@ class _ProviderSetupScreenState extends State<ProviderSetupScreen> {
                   textCapitalization: TextCapitalization.sentences,
                   decoration: const InputDecoration(hintText: 'Styles, languages, what\'s included, how far you travel'),
                 ),
-                const SizedBox(height: 8),
-                Text('Photos of your work are coming soon.', style: body(12, color: HC.muted)),
+                const SizedBox(height: 22),
+                const SectionLabel('Photos of your work'),
+                Text(
+                  'Your best work sells for you. Add up to ${ProviderProfile.maxPhotos} photos: setups, cakes, events you\'ve shot. '
+                  'Long-press a photo to make it your cover.',
+                  style: body(13, color: HC.muted),
+                ),
+                const SizedBox(height: 10),
+                _GalleryEditor(
+                  photos: photos,
+                  uploading: uploading,
+                  onAdd: _addPhotos,
+                  onRemove: _removePhoto,
+                  onCover: _makeCover,
+                ),
+                const SizedBox(height: 18),
+                const SectionLabel('Instagram'),
+                TextField(
+                  controller: instaCtrl,
+                  autocorrect: false,
+                  decoration: const InputDecoration(prefixText: '@ ', hintText: 'yourbusiness (customers can open your full gallery)'),
+                ),
+                const SizedBox(height: 18),
+                const SectionLabel('Website (optional)'),
+                TextField(
+                  controller: webCtrl,
+                  keyboardType: TextInputType.url,
+                  autocorrect: false,
+                  decoration: const InputDecoration(hintText: 'e.g. lensandlaughter.com'),
+                ),
                 if (error != null) ...[
                   const SizedBox(height: 12),
                   Text(error!, style: body(13, color: const Color(0xFFB42318), weight: FontWeight.w500)),
@@ -178,6 +277,91 @@ class _ProviderSetupScreenState extends State<ProviderSetupScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Grid of the provider's photos with an "Add photos" tile.
+class _GalleryEditor extends StatelessWidget {
+  const _GalleryEditor({required this.photos, required this.uploading, required this.onAdd, required this.onRemove, required this.onCover});
+  final List<String> photos;
+  final int uploading;
+  final VoidCallback onAdd;
+  final ValueChanged<String> onRemove;
+  final ValueChanged<String> onCover;
+
+  @override
+  Widget build(BuildContext context) {
+    final full = photos.length + uploading >= ProviderProfile.maxPhotos;
+    final tiles = <Widget>[
+      for (var i = 0; i < photos.length; i++)
+        GestureDetector(
+          onTap: () => openPhotoViewer(context, photos, i),
+          onLongPress: () => onCover(photos[i]),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              GalleryImage(photos[i], radius: 12),
+              if (i == 0)
+                Positioned(
+                  left: 6,
+                  bottom: 6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(color: HC.lime, borderRadius: BorderRadius.circular(6)),
+                    child: Text('Cover', style: body(11, weight: FontWeight.w700)),
+                  ),
+                ),
+              Positioned(
+                right: 4,
+                top: 4,
+                child: Material(
+                  color: Colors.black54,
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () => onRemove(photos[i]),
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(Icons.close_rounded, size: 16, color: Colors.white, semanticLabel: 'Remove photo'),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      for (var i = 0; i < uploading; i++)
+        Container(
+          decoration: BoxDecoration(color: HC.track, borderRadius: BorderRadius.circular(12)),
+          alignment: Alignment.center,
+          child: const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5)),
+        ),
+      if (!full)
+        Material(
+          color: HC.card,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: HC.violet, width: 1.5)),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: onAdd,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.add_photo_alternate_outlined, color: HC.violet, size: 28),
+                const SizedBox(height: 4),
+                Text('Add photos', style: body(12, color: HC.violet, weight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ),
+    ];
+    return GridView.count(
+      crossAxisCount: 3,
+      mainAxisSpacing: 8,
+      crossAxisSpacing: 8,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      children: tiles,
     );
   }
 }
