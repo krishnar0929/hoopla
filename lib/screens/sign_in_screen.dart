@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../services/account_service.dart';
+import '../services/referrals.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -24,6 +25,8 @@ class _SignInScreenState extends State<SignInScreen> {
   late UserRole role = widget.initialRole;
   final emailCtrl = TextEditingController();
   final passCtrl = TextEditingController();
+  final refCtrl = TextEditingController();
+  bool _refFilled = false;
   bool creating = true;
   bool busy = false;
   String? error;
@@ -35,8 +38,20 @@ class _SignInScreenState extends State<SignInScreen> {
   void dispose() {
     emailCtrl.dispose();
     passCtrl.dispose();
+    refCtrl.dispose();
     super.dispose();
   }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_refFilled) {
+      _refFilled = true;
+      refCtrl.text = AppScope.of(context).pendingRefCode ?? '';
+    }
+  }
+
+  bool get _askForCode => creating && role == UserRole.customer;
 
   Future<void> _run(Future<void> Function(AccountService a) action) async {
     final state = AppScope.of(context);
@@ -45,8 +60,17 @@ class _SignInScreenState extends State<SignInScreen> {
       setState(() => error = 'Sign-in needs Firebase. Run flutterfire configure first.');
       return;
     }
+    final typed = refCtrl.text.trim();
+    if (_askForCode && typed.isNotEmpty) {
+      if (normalizeCode(typed) == null) {
+        setState(() => error = 'That friend\'s code doesn\'t look right. Codes are 6 letters and numbers.');
+        return;
+      }
+      await state.setPendingRefCode(typed);
+    }
     final carry = List.of(state.events);
     final nav = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     setState(() {
       busy = true;
       error = null;
@@ -54,6 +78,8 @@ class _SignInScreenState extends State<SignInScreen> {
     try {
       await action(a);
       await state.afterSignIn(role, carry);
+      final notice = state.takeReferralNotice();
+      if (notice != null) messenger.showSnackBar(SnackBar(content: Text(notice)));
       if (mounted) nav.pop(true);
     } on FirebaseAuthException catch (e) {
       if (mounted) setState(() => error = _message(e));
@@ -184,6 +210,18 @@ class _SignInScreenState extends State<SignInScreen> {
                     decoration: InputDecoration(labelText: creating ? 'Create a password (6+ characters)' : 'Password'),
                     onSubmitted: (_) => _email(),
                   ),
+                  if (_askForCode) ...[
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: refCtrl,
+                      textCapitalization: TextCapitalization.characters,
+                      autocorrect: false,
+                      decoration: const InputDecoration(
+                        labelText: 'Friend\'s invite code (optional)',
+                        helperText: 'You both get 1 week of Pro free',
+                      ),
+                    ),
+                  ],
                   if (error != null) ...[
                     const SizedBox(height: 10),
                     Text(error!, style: body(13, color: const Color(0xFFB42318), weight: FontWeight.w500)),

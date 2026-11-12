@@ -11,6 +11,7 @@ import '../models/provider_profile.dart';
 import '../services/account_service.dart';
 import '../services/event_store.dart';
 import '../services/plan_generator.dart';
+import '../services/referrals.dart';
 
 /// What the person can see: guest (no account), member (free account) or premium (any paid plan).
 enum Access { guest, member, premium }
@@ -28,7 +29,7 @@ extension TierLabel on Tier {
 
 /// Holds the events, the signed-in account, and saves every change.
 class AppState extends ChangeNotifier {
-  AppState(this.store, {this.usingCloud = false, this.accounts});
+  AppState(this.store, {this.usingCloud = false, this.accounts, this.referrals});
 
   final EventStore store;
 
@@ -37,6 +38,9 @@ class AppState extends ChangeNotifier {
 
   /// Sign-in and profiles. Null when Firebase isn't set up.
   final AccountService? accounts;
+
+  /// Refer a friend. Null when Firebase isn't set up.
+  final ReferralService? referrals;
 
   /// All events, newest first.
   List<EventDetails> events = [];
@@ -70,6 +74,7 @@ class AppState extends ChangeNotifier {
     if (kDebugMode && devTier != null) return devTier!;
     if (!isSignedIn) return Tier.free;
     final paid = paidTier;
+    if (onReferralBonus) return Tier.pro;
     if (onTrial && trialTier.index > paid.index) return trialTier;
     return paid;
   }
@@ -125,6 +130,84 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ---------- refer a friend ----------
+
+  /// Your code, friends who joined, and free Pro earned.
+  ReferralStatus referral = const ReferralStatus();
+
+  /// A friend's code typed (or opened from a ?ref= link) before signing in.
+  String? pendingRefCode;
+  static const _pendingRefKey = 'hoopla.pendingRefCode';
+
+  /// A message to show once after sign-in applied a friend's code.
+  String? _referralNotice;
+
+  DateTime? get bonusProUntil => referral.bonusUntil;
+
+  bool get onReferralBonus {
+    final until = bonusProUntil;
+    return isSignedIn && until != null && DateTime.now().isBefore(until);
+  }
+
+  Future<void> setPendingRefCode(String? code) async {
+    pendingRefCode = normalizeCode(code);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (pendingRefCode == null) {
+        await prefs.remove(_pendingRefKey);
+      } else {
+        await prefs.setString(_pendingRefKey, pendingRefCode!);
+      }
+    } catch (_) {}
+    notifyListeners();
+  }
+
+  /// Your invite code, made the first time.
+  Future<String> ensureRefCode() async {
+    final r = referrals;
+    if (r == null) throw ReferralError('Invites need an internet connection.');
+    final code = await r.ensureCode();
+    if (referral.code != code) await _loadReferral();
+    notifyListeners();
+    return code;
+  }
+
+  /// Joins with a friend's code. Returns an error message, or null when it worked.
+  Future<String?> redeemCode(String code) async {
+    final r = referrals;
+    if (r == null) return 'Invites need an internet connection.';
+    try {
+      await r.redeem(code);
+    } on ReferralError catch (e) {
+      return e.message;
+    } catch (e) {
+      return 'Could not apply the code. Please try again.';
+    }
+    await _loadReferral();
+    notifyListeners();
+    return null;
+  }
+
+  /// The message from applying a saved friend's code at sign-in (shown once).
+  String? takeReferralNotice() {
+    final n = _referralNotice;
+    _referralNotice = null;
+    return n;
+  }
+
+  Future<void> _loadReferral() async {
+    final r = referrals;
+    if (r == null || !isSignedIn) {
+      referral = const ReferralStatus();
+      return;
+    }
+    try {
+      referral = await r.load();
+    } catch (e) {
+      debugPrint('Could not load referrals: $e');
+    }
+  }
+
   bool atLeast(Tier t) => tier.index >= t.index;
 
   bool get isPremium => atLeast(Tier.basic);
@@ -146,6 +229,7 @@ class AppState extends ChangeNotifier {
       for (final t in Tier.values) {
         if (t.name == saved) devTier = t;
       }
+      pendingRefCode = normalizeCode(prefs.getString(_pendingRefKey));
       final raw = prefs.getString(_pendingReelsKey);
       if (raw != null) {
         pendingReels = [
@@ -195,6 +279,7 @@ class AppState extends ChangeNotifier {
   Future<void> _loadAccount() async {
     profile = null;
     provider = null;
+    referral = const ReferralStatus();
     final a = accounts;
     if (a == null || !a.isSignedIn) return;
     try {
@@ -203,6 +288,7 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       debugPrint('Could not load account: $e');
     }
+    await _loadReferral();
   }
 
   Future<void> _loadEvents({String? preferId}) async {
@@ -315,6 +401,12 @@ class AppState extends ChangeNotifier {
       await _persist(e);
     }
     await _loadAccount();
+    final code = pendingRefCode;
+    if (code != null && referral.usedCode == null) {
+      final err = await redeemCode(code);
+      _referralNotice = err ?? 'Friend\'s code applied! You both get 1 week of Pro free. 🎉';
+    }
+    if (code != null) await setPendingRefCode(null);
     await _loadEvents(preferId: preferId);
     notifyListeners();
   }
@@ -346,6 +438,7 @@ class AppState extends ChangeNotifier {
     }
     profile = null;
     provider = null;
+    referral = const ReferralStatus();
     await _loadEvents();
     notifyListeners();
   }
@@ -366,6 +459,7 @@ class AppState extends ChangeNotifier {
     }
     profile = null;
     provider = null;
+    referral = const ReferralStatus();
     await _loadEvents();
     notifyListeners();
     return null;

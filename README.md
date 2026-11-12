@@ -115,3 +115,26 @@ Yearly: $29.99 / $79.99. Prices and features live in `planOffers` in `lib/screen
 - **Verified badge:** set `providers/{uid}.verified = true` in the console.
 - **Events:** ⋯ menu on the plan → Start new event, My events, Cancel this event (restorable).
 - **Delete account:** Account → Delete account (Apple requires this).
+
+## Refer a friend, feedback and ratings
+
+**Refer a friend** (Account → Refer a friend, also on the Plans page). Each signed-in person gets a
+6-character invite code. When a friend signs up and enters it, you **both get 1 week of Pro free**.
+Every extra friend adds another week on the end.
+
+- `refCodes/{CODE}` says who owns a code. `users/{uid}.refCode` holds your own code.
+- `referrals/{friendUid}` is written once per account when a friend joins with a code.
+  Its `createdAt` is server time, so the free week can't be faked.
+- Invite links look like `https://hoopla-894ca.web.app/?ref=CODE`. The web app keeps the code
+  and applies it after sign-up. In the phone app, friends type the code on the sign-up screen.
+
+**Help & feedback** (Account → Help, feedback & rate Hoopla):
+
+- Email us opens mail to northbitapps@gmail.com.
+- Send feedback / Report a problem saves type, star rating and comments to the `feedback`
+  collection. Read it in the Firebase console (Firestore → feedback). The app can't read it back.
+- Rate Hoopla: 4–5 stars opens Apple's review pop-up (or the App Store page), 1–3 stars opens the
+  feedback form so you hear about problems first.
+- After a couple of party-mode games finish, Hoopla asks "Enjoying Hoopla?" once.
+
+Deploy the rules after pulling: `firebase deploy --only firestore:rules`.
