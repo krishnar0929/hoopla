@@ -12,6 +12,7 @@ import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/gallery.dart';
+import '../widgets/reviews.dart';
 import '../widgets/locked.dart';
 import 'provider_detail_screen.dart';
 
@@ -445,6 +446,7 @@ class _ProviderCard extends StatelessWidget {
                       ],
                     ],
                   ),
+                  RatingBadge(providerUid: p.uid),
                   if (details.isNotEmpty) Text(details, style: body(12, color: HC.muted)),
                   if (p.about.isNotEmpty)
                     Padding(

@@ -4,6 +4,7 @@ import '../models/provider_profile.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/gallery.dart';
+import '../widgets/reviews.dart';
 
 /// A provider's full listing: photos of their work, about, prices and contact.
 class ProviderDetailScreen extends StatelessWidget {
@@ -43,6 +44,8 @@ class ProviderDetailScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 4),
+              RatingBadge(providerUid: p.uid),
+              const SizedBox(height: 4),
               Text([p.city, if (p.priceRange.isNotEmpty) p.priceRange].join(' · '), style: body(14, color: HC.muted)),
               const SizedBox(height: 14),
               Wrap(
@@ -61,12 +64,13 @@ class ProviderDetailScreen extends StatelessWidget {
                     dark: true,
                     onTap: hasPhone ? () => openLink(context, Uri(scheme: 'sms', path: digits, queryParameters: {'body': quote})) : null,
                   ),
-                  if (p.instagramUrl != null)
-                    _Action(icon: Icons.camera_alt_outlined, label: 'Instagram', onTap: () => openLink(context, p.instagramUrl!)),
-                  if (p.websiteUrl != null)
-                    _Action(icon: Icons.language_rounded, label: 'Website', onTap: () => openLink(context, p.websiteUrl!)),
                 ],
               ),
+              if (p.hasSocial) ...[
+                const SizedBox(height: 20),
+                const SectionLabel('Find them on'),
+                SocialLinks(provider: p),
+              ],
               if (p.about.isNotEmpty) ...[
                 const SizedBox(height: 20),
                 const SectionLabel('About'),
@@ -92,6 +96,14 @@ class ProviderDetailScreen extends StatelessWidget {
                   ),
                 ),
               ],
+              if (p.featured.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                const SectionLabel('Featured reels & videos'),
+                FeaturedPosts(links: p.featured),
+              ],
+              const SizedBox(height: 20),
+              const SectionLabel('Ratings & reviews'),
+              ReviewsSection(provider: p),
             ],
           ),
         ),

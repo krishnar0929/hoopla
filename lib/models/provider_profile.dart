@@ -12,8 +12,16 @@ class ProviderProfile {
     this.photos = const [],
     this.instagram = '',
     this.website = '',
+    this.facebook = '',
+    this.youtube = '',
+    this.tiktok = '',
+    this.reviewsLink = '',
+    this.featured = const [],
     this.verified = false,
   });
+
+  /// Most featured post links (reels, videos) a provider can show.
+  static const maxFeatured = 6;
 
   /// Most photos a provider can show.
   static const maxPhotos = 12;
@@ -35,6 +43,17 @@ class ProviderProfile {
   final String instagram;
   final String website;
 
+  /// Facebook page, YouTube channel, TikTok: a handle or a full link.
+  final String facebook;
+  final String youtube;
+  final String tiktok;
+
+  /// Link to their reviews elsewhere (Google, Yelp, WeddingWire, Facebook reviews).
+  final String reviewsLink;
+
+  /// Links to their best posts: Instagram reels/posts, YouTube, TikTok videos.
+  final List<String> featured;
+
   /// Set only by you (the admin) in the Firebase console.
   final bool verified;
 
@@ -44,6 +63,14 @@ class ProviderProfile {
     if (website.isEmpty) return null;
     return Uri.tryParse(website.startsWith('http') ? website : 'https://$website');
   }
+
+  Uri? get facebookUrl => socialUrl(facebook, 'www.facebook.com', '');
+  Uri? get youtubeUrl => socialUrl(youtube, 'www.youtube.com', '@');
+  Uri? get tiktokUrl => socialUrl(tiktok, 'www.tiktok.com', '@');
+  Uri? get reviewsUrl => reviewsLink.isEmpty ? null : Uri.tryParse(reviewsLink.startsWith('http') ? reviewsLink : 'https://$reviewsLink');
+
+  /// True when the listing links anywhere outside Hoopla.
+  bool get hasSocial => [instagramUrl, facebookUrl, youtubeUrl, tiktokUrl, reviewsUrl, websiteUrl].any((u) => u != null);
 
   /// Digits only, for call and WhatsApp links.
   String get phoneDigits => phone.replaceAll(RegExp(r'[^0-9]'), '');
@@ -61,6 +88,11 @@ class ProviderProfile {
         'photos': photos,
         'instagram': instagram,
         'website': website,
+        'facebook': facebook,
+        'youtube': youtube,
+        'tiktok': tiktok,
+        'reviewsLink': reviewsLink,
+        'featured': featured,
       };
 
   factory ProviderProfile.fromMap(Map<String, dynamic> m) => ProviderProfile(
@@ -74,6 +106,11 @@ class ProviderProfile {
         photos: [for (final x in (m['photos'] as List? ?? const [])) if (x is String) x],
         instagram: m['instagram'] as String? ?? '',
         website: m['website'] as String? ?? '',
+        facebook: m['facebook'] as String? ?? '',
+        youtube: m['youtube'] as String? ?? '',
+        tiktok: m['tiktok'] as String? ?? '',
+        reviewsLink: m['reviewsLink'] as String? ?? '',
+        featured: [for (final x in (m['featured'] as List? ?? const [])) if (x is String) x],
         verified: m['verified'] as bool? ?? false,
       );
 }
@@ -86,4 +123,16 @@ String cleanInstagram(String input) {
   t = t.replaceFirst(RegExp(r'^@+'), '');
   t = t.replaceAll(RegExp(r'[^A-Za-z0-9._]'), '');
   return t.toLowerCase();
+}
+
+/// A full link stays as it is; a handle like "@lensandlaughter" becomes
+/// https://host/<prefix>lensandlaughter. Empty input gives null.
+Uri? socialUrl(String value, String host, String prefix) {
+  final v = value.trim();
+  if (v.isEmpty) return null;
+  if (v.startsWith('http://') || v.startsWith('https://')) return Uri.tryParse(v);
+  if (v.contains('.') && v.contains('/')) return Uri.tryParse('https://$v');
+  final handle = v.replaceFirst(RegExp(r'^@+'), '').replaceAll(RegExp(r'\s'), '');
+  if (handle.isEmpty) return null;
+  return Uri.https(host, '/$prefix$handle');
 }

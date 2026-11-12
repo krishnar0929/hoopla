@@ -6,6 +6,7 @@ import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/gallery.dart';
+import '../widgets/reviews.dart';
 import 'account_sheet.dart';
 import 'provider_setup_screen.dart';
 
@@ -89,16 +90,13 @@ class ProviderHomeScreen extends StatelessWidget {
                         )
                       else
                         PhotoGrid(photos: p.photos),
-                      if (p.instagramUrl != null) ...[
-                        const SizedBox(height: 10),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: TextButton.icon(
-                            onPressed: () => openLink(context, p.instagramUrl!),
-                            icon: const Icon(Icons.camera_alt_outlined, size: 18),
-                            label: Text('@${p.instagram} on Instagram'),
-                          ),
-                        ),
+                      if (p.hasSocial) ...[
+                        const SizedBox(height: 12),
+                        SocialLinks(provider: p),
+                      ],
+                      if (p.featured.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        FeaturedPosts(links: p.featured),
                       ],
                       const SizedBox(height: 6),
                       FilledButton.icon(
@@ -109,7 +107,7 @@ class ProviderHomeScreen extends StatelessWidget {
                         ),
                         onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ProviderSetupScreen(existing: p))),
                         icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
-                        label: Text(p.photos.isEmpty ? 'Add photos of your work' : 'Edit photos', style: body(14, color: Colors.white, weight: FontWeight.w600)),
+                        label: Text(p.photos.isEmpty ? 'Add photos & social links' : 'Edit photos & links', style: body(14, color: Colors.white, weight: FontWeight.w600)),
                       ),
                     ],
                   ),
@@ -138,9 +136,13 @@ class ProviderHomeScreen extends StatelessWidget {
                   text: 'We check each listing before adding the Verified badge. Verified providers are shown first.',
                 ),
                 const SizedBox(height: 12),
+                Text('Ratings & reviews', style: display(18, weight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                ReviewsSection(provider: p, ownListing: true),
+                const SizedBox(height: 12),
                 const _InfoCard(
                   icon: Icons.inbox_outlined,
-                  title: 'Quote inbox and reviews',
+                  title: 'Quote inbox',
                   text: 'Coming soon. For now, requests come to you by call and WhatsApp.',
                 ),
                 const SizedBox(height: 16),

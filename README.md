@@ -151,3 +151,15 @@ Photos are stored in Firebase Storage at `providers/{uid}/gallery/`. One-time se
 2. `firebase deploy --only storage`
 3. For the web app to show photos: `gsutil cors set cors.json gs://BUCKET` (the bucket name is
    `storageBucket` in `lib/firebase_options.dart`).
+
+## Social links and ratings & reviews
+
+- Providers can add Instagram, Facebook, YouTube, TikTok, a link to their reviews elsewhere
+  (Google, Yelp, WeddingWire) and a website, plus up to 6 featured reel/video links.
+  Customers see them as buttons on the provider's page; each opens in its app.
+- Customers rate providers 1–5 stars with a comment at `providers/{uid}/reviews/{reviewerUid}`
+  (one review per customer per provider, editable). The average shows on every provider in Nearby.
+  Providers can reply to reviews from their home screen.
+- Instagram doesn't let other apps show someone's photos without that person connecting their
+  account (Meta's Instagram API, needs app review), so the in-app gallery uses photos providers
+  upload, and Instagram opens in the Instagram app.

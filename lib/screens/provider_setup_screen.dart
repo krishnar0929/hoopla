@@ -5,6 +5,7 @@ import '../data/helpers.dart';
 import '../models/provider_profile.dart';
 import '../services/account_service.dart';
 import '../services/gallery_service.dart';
+import '../services/shared_reels.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -29,6 +30,14 @@ class _ProviderSetupScreenState extends State<ProviderSetupScreen> {
   late final TextEditingController aboutCtrl;
   late final TextEditingController instaCtrl;
   late final TextEditingController webCtrl;
+  late final TextEditingController fbCtrl;
+  late final TextEditingController ytCtrl;
+  late final TextEditingController ttCtrl;
+  late final TextEditingController reviewsCtrl;
+  final featuredCtrl = TextEditingController();
+
+  /// Links to their best reels and videos.
+  late List<String> featured;
   late String serviceType;
 
   /// Work photos (download links). The first one is the cover.
@@ -51,6 +60,11 @@ class _ProviderSetupScreenState extends State<ProviderSetupScreen> {
     aboutCtrl = TextEditingController(text: p?.about ?? '');
     instaCtrl = TextEditingController(text: p?.instagram ?? '');
     webCtrl = TextEditingController(text: p?.website ?? '');
+    fbCtrl = TextEditingController(text: p?.facebook ?? '');
+    ytCtrl = TextEditingController(text: p?.youtube ?? '');
+    ttCtrl = TextEditingController(text: p?.tiktok ?? '');
+    reviewsCtrl = TextEditingController(text: p?.reviewsLink ?? '');
+    featured = List.of(p?.featured ?? const <String>[]);
     photos = List.of(p?.photos ?? const <String>[]);
     serviceType = p?.serviceType ?? helperCategories.first.label;
   }
@@ -64,7 +78,32 @@ class _ProviderSetupScreenState extends State<ProviderSetupScreen> {
     aboutCtrl.dispose();
     instaCtrl.dispose();
     webCtrl.dispose();
+    fbCtrl.dispose();
+    ytCtrl.dispose();
+    ttCtrl.dispose();
+    reviewsCtrl.dispose();
+    featuredCtrl.dispose();
     super.dispose();
+  }
+
+  void _addFeatured() {
+    final url = firstLink(featuredCtrl.text);
+    if (url == null) {
+      toast(context, 'Paste a link, e.g. from Instagram: Share → Copy link.');
+      return;
+    }
+    if (featured.length >= ProviderProfile.maxFeatured) {
+      toast(context, 'You can feature up to ${ProviderProfile.maxFeatured} posts.');
+      return;
+    }
+    if (featured.contains(url)) {
+      featuredCtrl.clear();
+      return;
+    }
+    setState(() {
+      featured.add(url);
+      featuredCtrl.clear();
+    });
   }
 
   Future<void> _addPhotos() async {
@@ -121,6 +160,7 @@ class _ProviderSetupScreenState extends State<ProviderSetupScreen> {
       setState(() => error = 'Add your business name, city and a phone number.');
       return;
     }
+    if (featuredCtrl.text.trim().isNotEmpty) _addFeatured();
     if (uploading > 0) {
       setState(() => error = 'Wait for your photos to finish uploading.');
       return;
@@ -142,6 +182,11 @@ class _ProviderSetupScreenState extends State<ProviderSetupScreen> {
         photos: photos,
         instagram: cleanInstagram(instaCtrl.text),
         website: webCtrl.text.trim(),
+        facebook: fbCtrl.text.trim(),
+        youtube: ytCtrl.text.trim(),
+        tiktok: ttCtrl.text.trim(),
+        reviewsLink: reviewsCtrl.text.trim(),
+        featured: featured,
       ));
       for (final url in removed) {
         GalleryService.delete(url);
@@ -237,21 +282,79 @@ class _ProviderSetupScreenState extends State<ProviderSetupScreen> {
                   onRemove: _removePhoto,
                   onCover: _makeCover,
                 ),
-                const SizedBox(height: 18),
-                const SectionLabel('Instagram'),
-                TextField(
-                  controller: instaCtrl,
-                  autocorrect: false,
-                  decoration: const InputDecoration(prefixText: '@ ', hintText: 'yourbusiness (customers can open your full gallery)'),
+                const SizedBox(height: 22),
+                const SectionLabel('Your social media'),
+                Text(
+                  'Customers tap these to see more of your work and your reviews. Add a handle or paste a link. All optional.',
+                  style: body(13, color: HC.muted),
                 ),
-                const SizedBox(height: 18),
-                const SectionLabel('Website (optional)'),
-                TextField(
-                  controller: webCtrl,
-                  keyboardType: TextInputType.url,
-                  autocorrect: false,
-                  decoration: const InputDecoration(hintText: 'e.g. lensandlaughter.com'),
+                const SizedBox(height: 10),
+                _SocialField(controller: instaCtrl, icon: Icons.camera_alt_outlined, label: 'Instagram', hint: '@yourbusiness'),
+                _SocialField(controller: fbCtrl, icon: Icons.facebook_rounded, label: 'Facebook page', hint: 'Page name or link'),
+                _SocialField(controller: ytCtrl, icon: Icons.smart_display_outlined, label: 'YouTube', hint: '@yourchannel'),
+                _SocialField(controller: ttCtrl, icon: Icons.music_note_rounded, label: 'TikTok', hint: '@yourbusiness'),
+                _SocialField(
+                  controller: reviewsCtrl,
+                  icon: Icons.reviews_outlined,
+                  label: 'Your reviews elsewhere',
+                  hint: 'Google, Yelp or WeddingWire reviews link',
+                  url: true,
                 ),
+                _SocialField(controller: webCtrl, icon: Icons.language_rounded, label: 'Website', hint: 'e.g. lensandlaughter.com', url: true),
+                const SizedBox(height: 14),
+                const SectionLabel('Featured posts'),
+                Text(
+                  'Show off your best reels and videos. In Instagram, YouTube or TikTok tap Share → Copy link, then paste here.',
+                  style: body(13, color: HC.muted),
+                ),
+                const SizedBox(height: 10),
+                for (final link in featured)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: CardBox(
+                      padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.play_circle_outline_rounded, color: HC.violet, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${reelSource(link) ?? 'Post'} · ${Uri.tryParse(link)?.path ?? ''}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: body(13),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Remove',
+                            onPressed: () => setState(() => featured.remove(link)),
+                            icon: const Icon(Icons.close_rounded, size: 18),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                if (featured.length < ProviderProfile.maxFeatured)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: featuredCtrl,
+                          keyboardType: TextInputType.url,
+                          autocorrect: false,
+                          decoration: const InputDecoration(hintText: 'Paste a reel or video link'),
+                          onSubmitted: (_) => _addFeatured(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton.filled(
+                        style: IconButton.styleFrom(backgroundColor: HC.violet),
+                        tooltip: 'Add post',
+                        onPressed: _addFeatured,
+                        icon: const Icon(Icons.add_rounded, color: Colors.white),
+                      ),
+                    ],
+                  ),
                 if (error != null) ...[
                   const SizedBox(height: 12),
                   Text(error!, style: body(13, color: const Color(0xFFB42318), weight: FontWeight.w500)),
@@ -362,6 +465,32 @@ class _GalleryEditor extends StatelessWidget {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       children: tiles,
+    );
+  }
+}
+
+class _SocialField extends StatelessWidget {
+  const _SocialField({required this.controller, required this.icon, required this.label, required this.hint, this.url = false});
+  final TextEditingController controller;
+  final IconData icon;
+  final String label;
+  final String hint;
+  final bool url;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: TextField(
+        controller: controller,
+        keyboardType: url ? TextInputType.url : TextInputType.text,
+        autocorrect: false,
+        decoration: InputDecoration(
+          prefixIcon: Icon(icon, color: HC.violet),
+          labelText: label,
+          hintText: hint,
+        ),
+      ),
     );
   }
 }
