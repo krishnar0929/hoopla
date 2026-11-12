@@ -86,7 +86,7 @@ class _AccountSheet extends StatelessWidget {
           style: body(13, color: HC.muted),
         ),
         const SizedBox(height: 16),
-        if (state.tier != Tier.host)
+        if (state.tier != Tier.pro)
           _SheetButton(label: state.isPremium ? 'Change plan' : 'See plans', filled: true, onTap: () => open(const UpgradeScreen())),
         if (!state.isProvider)
           _SheetButton(

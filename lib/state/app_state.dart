@@ -13,14 +13,13 @@ import '../services/plan_generator.dart';
 enum Access { guest, member, premium }
 
 /// Subscription plans, lowest to highest. Each includes everything below it.
-enum Tier { free, basic, pro, host }
+enum Tier { free, basic, pro }
 
 extension TierLabel on Tier {
   String get label => switch (this) {
         Tier.free => 'Free',
         Tier.basic => 'Basic',
         Tier.pro => 'Pro',
-        Tier.host => 'Host',
       };
 }
 
@@ -63,7 +62,7 @@ class AppState extends ChangeNotifier {
   UserRole get role => profile?['role'] == 'provider' ? UserRole.provider : UserRole.customer;
   bool get isProvider => isSignedIn && role == UserRole.provider;
 
-  /// The plan from users/{uid}.plan ('basic', 'pro', 'host'), set by you or later by payments.
+  /// The plan from users/{uid}.plan ('basic' or 'pro'), set by you or later by payments.
   Tier get tier {
     if (kDebugMode && devTier != null) return devTier!;
     if (!isSignedIn) return Tier.free;
@@ -71,7 +70,8 @@ class AppState extends ChangeNotifier {
     for (final t in Tier.values) {
       if (t.name == name) return t;
     }
-    if (profile?['premium'] == true) return Tier.host;
+    // Older values from earlier test builds.
+    if (name == 'host' || profile?['premium'] == true) return Tier.pro;
     return Tier.free;
   }
 

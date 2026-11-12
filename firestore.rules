@@ -9,7 +9,7 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
-    // Profile: role, name, email. `plan` ('basic' | 'pro' | 'host') and `premium` are set
+    // Profile: role, name, email. `plan` ('basic' | 'pro') and `premium` are set
     // only by you in the console (later by the payment system), never by the app.
     match /users/{uid} {
       allow read, delete: if isOwner(uid);

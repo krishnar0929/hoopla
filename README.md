@@ -94,19 +94,19 @@ App Store Connect → App Privacy before releasing.
 
 ## Accounts, providers and plans
 
-| | Guest | Free account | Basic $3.99/mo | Pro $9.99/mo | Host $14.99/mo |
-| --- | --- | --- | --- | --- | --- |
-| Plan + "Tell us about your event" | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Timeline | first 3 steps | full | full | full | full |
-| Games | 3 | all | all + saved reels | ✓ | ✓ |
-| Checklist | – | ✓ | ✓ | ✓ | ✓ |
-| Budget, Party mode, several events | – | – | ✓ | ✓ | ✓ |
-| Nearby professionals, compare, quotes | – | – | – | ✓ | ✓ |
-| Invites (contacts, SMS, email, WhatsApp, RSVP) | – | – | – | – | ✓ (coming soon) |
+| | Guest | Free account | Basic $3.99/mo | Pro $9.99/mo |
+| --- | --- | --- | --- | --- |
+| Plan + "Tell us about your event" | ✓ | ✓ | ✓ | ✓ |
+| Timeline | first 3 steps | full | full | full |
+| Games | 3 | all | all + saved reels | ✓ |
+| Checklist | – | ✓ | ✓ | ✓ |
+| Budget, Party mode, several events | – | – | ✓ | ✓ |
+| Nearby professionals, compare, quotes | – | – | – | ✓ |
+| Invites (contacts, SMS, email, WhatsApp, RSVP) | – | – | – | ✓ (coming soon) |
 
-Yearly: $29.99 / $79.99 / $119.99. Prices and features live in `planOffers` in `lib/screens/upgrade_screen.dart`.
+Yearly: $29.99 / $79.99. Prices and features live in `planOffers` in `lib/screens/upgrade_screen.dart`.
 
-- **Give someone a plan:** Firestore → `users/{uid}` → add `plan` = `basic`, `pro` or `host` (string). Payments come later.
+- **Give someone a plan:** Firestore → `users/{uid}` → add `plan` = `basic` or `pro` (string). Payments come later.
 - **Test plans locally:** debug builds show a "Developer: test a plan" picker at the bottom of the plans page.
 - **Sign in:** Email (everywhere), Google (web), Apple (iPhone). Guests are linked to their new account, so their event comes along.
 - **Roles:** customers plan events; providers publish a listing at `providers/{uid}` shown in Nearby.

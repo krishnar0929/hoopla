@@ -53,7 +53,7 @@ const planOffers = <PlanOffer>[
   ),
   PlanOffer(
     tier: Tier.pro,
-    tagline: 'Find the right people for your event',
+    tagline: 'Find the right people and invite everyone',
     monthly: 9.99,
     yearly: 79.99,
     badge: 'Most popular',
@@ -62,30 +62,16 @@ const planOffers = <PlanOffer>[
       'Find photographers, decorators, panthulu, cake makers and more nearby',
       'Compare ratings, reviews and prices',
       'Call, WhatsApp and request quotes in one tap',
-      'Message providers in the app',
-      'Send booking requests',
-    ],
-    comingSoon: 'In-app messages and booking requests arrive in an upcoming update.',
-  ),
-  PlanOffer(
-    tier: Tier.host,
-    tagline: 'Invite everyone and track who\'s coming',
-    monthly: 14.99,
-    yearly: 119.99,
-    includes: 'Everything in Pro, plus:',
-    features: [
-      'Pick guests straight from your phone contacts',
-      'Send invites by text message and email',
+      'Message providers and send booking requests',
+      'Invite guests from your phone contacts, by text and email',
       'Share invites to WhatsApp chats and groups',
-      'RSVP tracking with a live guest count',
-      'Automatic reminders before the party',
-      'Custom invitation cards',
+      'RSVP tracking, live guest count and reminders',
     ],
-    comingSoon: 'Invites arrive in an upcoming update.',
+    comingSoon: 'Messages, booking requests and invites arrive in upcoming updates.',
   ),
 ];
 
-/// Subscription page: Basic, Pro and Host, monthly or yearly.
+/// Subscription page: Basic and Pro, monthly or yearly.
 /// Payments are not connected yet; choosing a plan says so.
 class UpgradeScreen extends StatefulWidget {
   const UpgradeScreen({super.key});
