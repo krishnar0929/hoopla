@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -12,6 +13,8 @@ import '../services/account_service.dart';
 import '../services/event_store.dart';
 import '../services/plan_generator.dart';
 import '../services/referrals.dart';
+import '../services/reminder_plan.dart';
+import '../services/reminders.dart';
 
 /// What the person can see: guest (no account), member (free account) or premium (any paid plan).
 enum Access { guest, member, premium }
@@ -208,6 +211,63 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  // ---------- reminders (free for everyone, phone app only) ----------
+
+  /// null = never asked, true = on, false = turned off.
+  bool? remindersEnabled;
+
+  /// Hour of the day task reminders arrive (9 = 9 AM).
+  int remindHour = 9;
+  static const _remindersKey = 'hoopla.reminders';
+  static const _remindHourKey = 'hoopla.remindHour';
+  Timer? _reminderSync;
+
+  bool get remindersOn => Reminders.supported && remindersEnabled == true;
+
+  /// Turns reminders on (asking the phone for permission) or off.
+  /// Returns false when the phone said no.
+  Future<bool> setReminders(bool on) async {
+    var ok = true;
+    if (on) ok = await Reminders.requestPermission();
+    remindersEnabled = on && ok;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_remindersKey, remindersEnabled!);
+    } catch (_) {}
+    notifyListeners();
+    return ok;
+  }
+
+  Future<void> setRemindHour(int h) async {
+    remindHour = h.clamp(0, 23);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_remindHourKey, remindHour);
+    } catch (_) {}
+    notifyListeners();
+  }
+
+  /// Every change to events reschedules the reminders (once things settle).
+  @override
+  void notifyListeners() {
+    super.notifyListeners();
+    _reminderSync?.cancel();
+    _reminderSync = Timer(const Duration(milliseconds: 700), syncReminders);
+  }
+
+  Future<void> syncReminders() async {
+    if (!Reminders.supported) return;
+    if (!remindersOn) {
+      await Reminders.cancelAll();
+      return;
+    }
+    final now = DateTime.now();
+    final all = <ReminderSpec>[
+      for (final e in activeEvents) ...planReminders(e: e, tasks: PlanGenerator.build(e).tasks, now: now, hour: remindHour),
+    ];
+    await Reminders.replaceAll(all);
+  }
+
   bool atLeast(Tier t) => tier.index >= t.index;
 
   bool get isPremium => atLeast(Tier.basic);
@@ -230,6 +290,8 @@ class AppState extends ChangeNotifier {
         if (t.name == saved) devTier = t;
       }
       pendingRefCode = normalizeCode(prefs.getString(_pendingRefKey));
+      remindersEnabled = prefs.getBool(_remindersKey);
+      remindHour = prefs.getInt(_remindHourKey) ?? 9;
       final raw = prefs.getString(_pendingReelsKey);
       if (raw != null) {
         pendingReels = [
@@ -239,6 +301,7 @@ class AppState extends ChangeNotifier {
     } catch (_) {}
     await _loadAccount();
     await _loadEvents();
+    unawaited(syncReminders());
   }
 
   // ---------- saved reels (free for everyone) ----------

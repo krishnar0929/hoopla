@@ -11,6 +11,7 @@ import 'screens/setup_screen.dart';
 import 'services/account_service.dart';
 import 'services/event_store.dart';
 import 'services/referrals.dart';
+import 'services/reminders.dart';
 import 'services/shared_reels.dart';
 import 'services/search_log.dart';
 import 'state/app_state.dart';
@@ -36,6 +37,8 @@ Future<void> main() async {
         'Authentication → Sign-in method → Anonymous is enabled. ($e)');
     store = LocalEventStore();
   }
+
+  await Reminders.init();
 
   final state = AppState(
     store,

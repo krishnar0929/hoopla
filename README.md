@@ -163,3 +163,17 @@ Photos are stored in Firebase Storage at `providers/{uid}/gallery/`. One-time se
 - Instagram doesn't let other apps show someone's photos without that person connecting their
   account (Meta's Instagram API, needs app review), so the in-app gallery uses photos providers
   upload, and Instagram opens in the Instagram app.
+
+## Reminders (free, phone app)
+
+Scheduled on the phone with `flutter_local_notifications`: no server, works offline, shows even
+when Hoopla is closed. The website shows a note instead.
+
+- Each unchecked checklist task reminds at 9 AM (changeable) on its due day; same-day tasks are
+  grouped. Overdue tasks get one catch-up reminder. Ticking a task off cancels it.
+- Countdown: 1 week before, 6 PM the evening before, and the morning of the party.
+- The bell on a task sets your own date and time for it (saved on the event as `taskReminders`).
+- Hoopla asks "Want reminders?" once, right after the first party is planned. The switch above
+  the checklist turns them on or off.
+- Everything is recalculated whenever an event changes (`AppState.syncReminders`), keeping the
+  soonest 60 (iOS allows 64). Rules live in `lib/services/reminder_plan.dart` (tested).

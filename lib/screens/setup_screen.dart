@@ -9,6 +9,7 @@ import '../services/search_log.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/celebration.dart';
+import '../widgets/reminder_ui.dart';
 import '../widgets/common.dart';
 import 'account_sheet.dart';
 import 'sign_in_screen.dart';
@@ -138,6 +139,7 @@ class _SetupScreenState extends State<SetupScreen> {
     setState(() => saving = true);
     final state = AppScope.of(context);
     final overlay = Celebration.overlayOf(context);
+    final rootNav = Navigator.of(context, rootNavigator: true);
     final isNew = widget.existing == null;
     final previous = state.event;
     final title = titleCtrl.text.trim().isEmpty ? '$occasion party' : titleCtrl.text.trim();
@@ -186,6 +188,7 @@ class _SetupScreenState extends State<SetupScreen> {
         message: '"$title" is all set: your timeline, checklist, budget and games are ready.',
         emoji: '🎈',
       );
+      askForReminders(rootNav, state);
     }
     if (!mounted) return;
     final nav = Navigator.of(context);
