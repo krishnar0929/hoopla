@@ -5,11 +5,13 @@ import 'package:intl/intl.dart';
 
 import '../data/helpers.dart';
 import '../models/event_details.dart';
+import '../models/provider_profile.dart';
 import '../services/plan_generator.dart';
 import '../services/search_log.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/locked.dart';
 
 /// Find photographers, panthulu, decorators and more, and keep a shortlist.
 class NearbyScreen extends StatefulWidget {
@@ -23,6 +25,17 @@ class _NearbyScreenState extends State<NearbyScreen> {
   String selected = helperCategories.first.label;
   String query = '';
   Timer? _searchPause;
+  Future<List<ProviderProfile>>? _providers;
+  String? _providersFor;
+
+  /// Hoopla providers for the selected service, fetched once per category.
+  Future<List<ProviderProfile>> _providersFuture(AppState state) {
+    if (_providers == null || _providersFor != selected) {
+      _providersFor = selected;
+      _providers = state.accounts!.findProviders(selected);
+    }
+    return _providers!;
+  }
 
   @override
   void dispose() {
@@ -95,6 +108,18 @@ class _NearbyScreenState extends State<NearbyScreen> {
   @override
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
+    if (!state.atLeast(Tier.pro)) {
+      return const LockedPage(
+        title: 'Find nearby professionals',
+        message: 'Part of Pro (\$9.99/month): photographers, decorators, panthulu, cake makers and more for your event, all in one place.',
+        points: [
+          'Browse providers by service, with prices and verified badges',
+          'Call or WhatsApp in one tap',
+          'Send quote requests with your date and guest count filled in',
+          'Keep a shortlist for every event',
+        ],
+      );
+    }
     final e = state.event!;
     final category = helperCategories.firstWhere((c) => c.label == selected);
     final cats = helperCategories.where((c) => query.isEmpty || c.label.toLowerCase().contains(query.toLowerCase())).toList();
@@ -197,6 +222,34 @@ class _NearbyScreenState extends State<NearbyScreen> {
             ),
           ],
         ),
+        if (state.accounts != null) ...[
+          const SizedBox(height: 20),
+          Text('ON HOOPLA', style: overline()),
+          const SizedBox(height: 8),
+          FutureBuilder<List<ProviderProfile>>(
+            future: _providersFuture(state),
+            builder: (ctx, snap) {
+              if (snap.connectionState != ConnectionState.done) {
+                return const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
+                );
+              }
+              final list = snap.data ?? const <ProviderProfile>[];
+              if (snap.hasError || list.isEmpty) {
+                return Text(
+                  'No ${selected.toLowerCase()} have joined Hoopla yet. Use the map above meanwhile.',
+                  style: body(13, color: HC.muted),
+                );
+              }
+              return Column(
+                children: [
+                  for (var i = 0; i < list.length; i++) _ProviderCard(provider: list[i], tile: HC.tiles[i % HC.tiles.length]),
+                ],
+              );
+            },
+          ),
+        ],
         const SizedBox(height: 18),
         if (mine.isNotEmpty) ...[
           Text('Your shortlist', style: overline()),
@@ -306,8 +359,102 @@ class _SmallButton extends StatelessWidget {
         child: Container(
           height: 36,
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          alignment: Alignment.center,
-          child: Text(label, style: body(12.5, weight: FontWeight.w600, color: dark ? Colors.white : (enabled ? HC.ink : HC.muted))),
+          child: Center(
+            widthFactor: 1,
+            child: Text(label, style: body(12.5, weight: FontWeight.w600, color: dark ? Colors.white : (enabled ? HC.ink : HC.muted))),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A provider who joined Hoopla, with one-tap contact.
+class _ProviderCard extends StatelessWidget {
+  const _ProviderCard({required this.provider, required this.tile});
+  final ProviderProfile provider;
+  final Color tile;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppScope.of(context);
+    final e = state.event!;
+    final p = provider;
+    final digits = p.phoneDigits;
+    final hasPhone = digits.isNotEmpty;
+    final quote = 'Hi ${p.businessName}, I found you on Hoopla. I\'m planning "${e.title}" on ${DateFormat('EEE, MMM d').format(e.date)} '
+        'at ${clockAmPm(e.startMinutes)} for about ${e.guests} guests (${e.indoor ? 'indoor' : 'outdoor'}). '
+        'Are you available, and could you share a quote?';
+    final saved = e.shortlist.any((v) => v.id == p.uid);
+    final details = [p.city, if (p.priceRange.isNotEmpty) p.priceRange].join(' · ');
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: CardBox(
+        padding: const EdgeInsets.all(10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 76,
+              height: 76,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(color: tile, borderRadius: BorderRadius.circular(14)),
+              child: Text(p.businessName.isEmpty ? '?' : p.businessName[0].toUpperCase(), style: display(28)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(child: Text(p.businessName, style: body(15, weight: FontWeight.w600))),
+                      if (p.verified) ...[
+                        const SizedBox(width: 4),
+                        const Icon(Icons.verified_rounded, size: 16, color: HC.violet, semanticLabel: 'Verified'),
+                      ],
+                    ],
+                  ),
+                  if (details.isNotEmpty) Text(details, style: body(12, color: HC.muted)),
+                  if (p.about.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(p.about, maxLines: 2, overflow: TextOverflow.ellipsis, style: body(12, color: HC.muted)),
+                    ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      _SmallButton(label: 'Call', onTap: hasPhone ? () => openLink(context, Uri(scheme: 'tel', path: digits)) : null),
+                      _SmallButton(
+                        label: 'WhatsApp',
+                        onTap: hasPhone ? () => openLink(context, Uri.https('wa.me', '/$digits', {'text': quote})) : null,
+                      ),
+                      _SmallButton(
+                        label: 'Get quote',
+                        dark: true,
+                        onTap: hasPhone ? () => openLink(context, Uri(scheme: 'sms', path: digits, queryParameters: {'body': quote})) : null,
+                      ),
+                      _SmallButton(
+                        label: saved ? 'Saved' : 'Save',
+                        onTap: saved
+                            ? null
+                            : () => state.update((ev) => ev.shortlist.add(ShortlistVendor(
+                                  id: p.uid,
+                                  category: p.serviceType,
+                                  name: p.businessName,
+                                  phone: p.phone,
+                                  note: p.priceRange,
+                                ))),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

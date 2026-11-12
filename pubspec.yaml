@@ -1,7 +1,7 @@
 name: hoopla
 description: Hoopla - plan your event, find nearby helpers, and play games people remember.
 publish_to: 'none'
-version: 0.1.0+2
+version: 0.1.0+10
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -15,6 +15,7 @@ dependencies:
   firebase_auth: ^5.3.1
   firebase_core: ^3.6.0
   google_fonts: ^6.2.1
+  google_sign_in: ^6.2.2
   intl: ^0.19.0
   package_info_plus: '>=8.0.0 <11.0.0'
   shared_preferences: ^2.3.2

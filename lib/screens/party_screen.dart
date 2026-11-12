@@ -11,6 +11,7 @@ import '../services/plan_generator.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/locked.dart';
 
 /// Party day mode: current game with a timer, scoreboard and what's next.
 class PartyScreen extends StatefulWidget {
@@ -77,6 +78,22 @@ class _PartyScreenState extends State<PartyScreen> {
   @override
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
+    if (state.access != Access.premium) {
+      return Container(
+        color: HC.ink,
+        child: const LockedPage(
+          dark: true,
+          title: 'Party day mode',
+          message: 'Run the party from your phone while it happens.',
+          points: [
+            'The game that\'s on now, with a countdown timer',
+            'Team scoreboard with a tap to add points',
+            'What\'s up next, so cake and food happen on time',
+            'Invite text, playlist and return gift ideas',
+          ],
+        ),
+      );
+    }
     final e = state.event!;
     final plan = state.plan;
     final games = [...plan.plannedGames, ...plan.backupGames];

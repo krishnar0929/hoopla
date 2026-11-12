@@ -2,18 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../models/event_details.dart';
+import '../services/account_service.dart';
+import '../services/event_parser.dart';
 import '../services/plan_generator.dart';
 import '../services/search_log.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import 'account_sheet.dart';
+import 'sign_in_screen.dart';
 
 /// "Tell us about your event" — used to create a new event or edit one.
 class SetupScreen extends StatefulWidget {
-  const SetupScreen({super.key, this.existing});
+  const SetupScreen({super.key, this.existing, this.replaceId});
 
   /// When set, the screen edits this event instead of creating a new one.
   final EventDetails? existing;
+
+  /// Free plan: this event is moved to Cancelled once the new one is saved.
+  final String? replaceId;
 
   @override
   State<SetupScreen> createState() => _SetupScreenState();
@@ -30,6 +37,8 @@ class _SetupScreenState extends State<SetupScreen> {
   late Audience audience;
   late int energy;
   bool saving = false;
+  final describeCtrl = TextEditingController();
+  String? describeNote;
 
   @override
   void initState() {
@@ -49,7 +58,60 @@ class _SetupScreenState extends State<SetupScreen> {
   @override
   void dispose() {
     titleCtrl.dispose();
+    describeCtrl.dispose();
     super.dispose();
+  }
+
+  /// Reads the "Tell us about your event" text and fills in the form.
+  void _fillFromText() {
+    final text = describeCtrl.text.trim();
+    if (text.isEmpty) return;
+    final p = EventParser.parse(text);
+    FocusScope.of(context).unfocus();
+    if (p.isEmpty) {
+      setState(() => describeNote = 'Couldn\'t spot the details. Try mentioning the occasion, number of guests, place and date.');
+      return;
+    }
+    final found = <String>[];
+    setState(() {
+      if (p.title != null) {
+        titleCtrl.text = p.title!;
+        found.add('"${p.title}"');
+      }
+      if (p.occasion != null) {
+        occasion = p.occasion!;
+        found.add(p.occasion!);
+      }
+      if (p.guests != null) {
+        guests = p.guests!;
+        found.add('${p.guests} guests');
+      }
+      if (p.indoor != null) {
+        indoor = p.indoor!;
+        found.add(p.indoor! ? 'Indoor' : 'Outdoor');
+      }
+      if (p.date != null) {
+        date = p.date!;
+        found.add(DateFormat('EEE, MMM d').format(p.date!));
+      }
+      if (p.startMinutes != null) {
+        startMinutes = p.startMinutes!;
+        found.add(clockAmPm(p.startMinutes!));
+      }
+      if (p.hours != null) {
+        hours = p.hours!;
+        found.add('${p.hours} hrs');
+      }
+      if (p.audience != null) {
+        audience = p.audience!;
+        found.add(p.audience!.label);
+      }
+      if (p.energy != null) {
+        energy = p.energy!;
+        found.add('${energyLevels[p.energy!]} energy');
+      }
+      describeNote = 'Filled in: ${found.join(' · ')}. Check the details below.';
+    });
   }
 
   Future<void> _pickDate() async {
@@ -103,6 +165,8 @@ class _SetupScreenState extends State<SetupScreen> {
       ..energy = energy;
     e.gameIds = PlanGenerator.suggestGameIds(e);
     await state.saveEvent(e);
+    final replaceId = widget.replaceId;
+    if (replaceId != null && replaceId != e.id) await state.cancelEvent(replaceId);
     SearchLog.instance.log('plan_created', filters: {
       'occasion': occasion,
       'guests': guests,
@@ -119,7 +183,9 @@ class _SetupScreenState extends State<SetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final state = AppScope.of(context);
     final editing = widget.existing != null;
+    final canPop = Navigator.of(context).canPop();
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -140,12 +206,21 @@ class _SetupScreenState extends State<SetupScreen> {
                       else
                         const _Logo(),
                       const Spacer(),
-                      if (!Navigator.of(context).canPop())
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(color: HC.card, shape: BoxShape.circle, border: Border.all(color: HC.line)),
-                          child: const Icon(Icons.person_outline_rounded, color: HC.ink),
+                      if (canPop)
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text('Cancel', style: body(15, weight: FontWeight.w600, color: HC.muted)),
+                        )
+                      else if (state.usingCloud && state.isSignedIn)
+                        IconButton(
+                          tooltip: 'Account',
+                          onPressed: () => showAccountSheet(context),
+                          icon: const Icon(Icons.person_rounded, color: HC.ink),
+                        )
+                      else if (state.usingCloud)
+                        TextButton(
+                          onPressed: () => Navigator.of(context).push(MaterialPageRoute<bool>(builder: (_) => const SignInScreen())),
+                          child: Text('Sign in', style: body(15, weight: FontWeight.w600, color: HC.violet)),
                         ),
                     ],
                   ),
@@ -158,6 +233,53 @@ class _SetupScreenState extends State<SetupScreen> {
                       const SizedBox(height: 8),
                       Text('Tell us a little about it — we plan the games, timeline and helpers.', style: body(14, color: HC.muted)),
                       const SizedBox(height: 22),
+                      if (!editing) ...[
+                        CardBox(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.auto_awesome_rounded, color: HC.violet, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text('Tell us about your event', style: body(15, weight: FontWeight.w600)),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              TextField(
+                                controller: describeCtrl,
+                                minLines: 2,
+                                maxLines: 4,
+                                textCapitalization: TextCapitalization.sentences,
+                                style: body(14),
+                                decoration: const InputDecoration(
+                                  fillColor: HC.ground,
+                                  hintText: "e.g. My son's 1st birthday, about 40 people in our backyard, Saturday Dec 12 at 4pm",
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                height: 44,
+                                child: FilledButton.icon(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: HC.ink,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  onPressed: _fillFromText,
+                                  icon: const Icon(Icons.auto_fix_high_rounded, size: 18),
+                                  label: const Text('Fill it in for me'),
+                                ),
+                              ),
+                              if (describeNote != null) ...[
+                                const SizedBox(height: 8),
+                                Text(describeNote!, style: body(13, color: HC.muted)),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                      ],
                       const SectionLabel("What's the occasion?"),
                       Wrap(
                         spacing: 8,
@@ -228,6 +350,17 @@ class _SetupScreenState extends State<SetupScreen> {
                       Segmented(options: energyLevels, selected: energy, height: 40, onChanged: (i) => setState(() => energy = i)),
                       const SizedBox(height: 8),
                       Text(_energyLine(energy), style: body(13, color: HC.muted)),
+                      if (!canPop && state.usingCloud && !state.isSignedIn) ...[
+                        const SizedBox(height: 18),
+                        Center(
+                          child: TextButton(
+                            onPressed: () => Navigator.of(context).push(MaterialPageRoute<bool>(
+                              builder: (_) => const SignInScreen(initialRole: UserRole.provider),
+                            )),
+                            child: const Text('Photographer, decorator or panthulu? Join as a provider', textAlign: TextAlign.center),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
