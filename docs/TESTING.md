@@ -10,7 +10,7 @@
 | # | Sign in as | Do this | You should see |
 |---|---|---|---|
 | 1 | priya@hoopla-test.dev | Open Account | Customer · Pro plan (friend bonus until …) |
-| 2 | priya | Nearby → Photographers | 3 studios with photo strips; Lens & Laughter ★ 4.7 (3 reviews) first in rating |
+| 2 | priya | Nearby → Photographers | 3 studios with photo strips; Lens & Laughter shows ★ 4.7 (3 reviews) |
 | 3 | priya | Tap Lens & Laughter | Cover photo, Find them on (Instagram, YouTube, TikTok, Website), Featured reels, reviews with "Reply from Lens & Laughter Studio" |
 | 4 | priya | Tap a photo | Full-screen viewer, swipe, pinch to zoom |
 | 5 | priya | Golden Hour Clicks → Write a review → 5★ | "Thanks!" toast; average updates; "Edit review" button |
