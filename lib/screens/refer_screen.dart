@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../services/referrals.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
+import '../widgets/celebration.dart';
 import '../widgets/common.dart';
 import 'sign_in_screen.dart';
 
@@ -87,6 +88,7 @@ class _ReferScreenState extends State<ReferScreen> {
       redeeming = true;
       redeemError = null;
     });
+    final overlay = Celebration.overlayOf(context);
     final err = await state.redeemCode(c);
     if (!mounted) return;
     setState(() {
@@ -96,7 +98,7 @@ class _ReferScreenState extends State<ReferScreen> {
     if (err == null) {
       friendCtrl.clear();
       await state.setPendingRefCode(null);
-      if (mounted) toast(context, 'Code applied! You both get 1 week of Pro free. 🎉');
+      Celebration.show(overlay, title: 'A week of Pro, on us!', message: 'Your friend gets a week too. Happy planning!', emoji: '🎁');
     }
   }
 

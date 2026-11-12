@@ -8,6 +8,7 @@ import '../services/plan_generator.dart';
 import '../services/search_log.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
+import '../widgets/celebration.dart';
 import '../widgets/common.dart';
 import 'account_sheet.dart';
 import 'sign_in_screen.dart';
@@ -136,6 +137,8 @@ class _SetupScreenState extends State<SetupScreen> {
   Future<void> _save() async {
     setState(() => saving = true);
     final state = AppScope.of(context);
+    final overlay = Celebration.overlayOf(context);
+    final isNew = widget.existing == null;
     final previous = state.event;
     final title = titleCtrl.text.trim().isEmpty ? '$occasion party' : titleCtrl.text.trim();
     final e = widget.existing ??
@@ -176,6 +179,14 @@ class _SetupScreenState extends State<SetupScreen> {
       'energy': energyLevels[energy],
       'date': date.toIso8601String().substring(0, 10),
     });
+    if (isNew) {
+      Celebration.show(
+        overlay,
+        title: 'Party planned!',
+        message: '"$title" is all set: your timeline, checklist, budget and games are ready.',
+        emoji: '🎈',
+      );
+    }
     if (!mounted) return;
     final nav = Navigator.of(context);
     if (nav.canPop()) nav.pop();

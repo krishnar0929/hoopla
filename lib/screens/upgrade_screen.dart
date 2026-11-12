@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../state/app_state.dart';
 import '../theme.dart';
+import '../widgets/celebration.dart';
 import '../widgets/common.dart';
 import 'refer_screen.dart';
 import 'sign_in_screen.dart';
@@ -89,6 +90,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
     final state = AppScope.of(context);
     final nav = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    final overlay = Celebration.overlayOf(context);
     if (!state.isSignedIn) {
       final ok = await nav.push<bool>(MaterialPageRoute(
         builder: (_) => const SignInScreen(reason: 'Sign in first so your plan stays with your account on every device.'),
@@ -99,6 +101,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
     if (!state.trialUsed && state.paidTier.index < offer.tier.index) {
       try {
         await state.startTrial(offer.tier);
+        Celebration.show(overlay, title: 'Welcome to ${offer.tier.label}!', message: 'Your 3-day free trial has started. Enjoy!', emoji: '✨');
         final ends = state.trialEndsAt;
         messenger.showSnackBar(SnackBar(
           content: Text(

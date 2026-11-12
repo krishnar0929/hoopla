@@ -8,6 +8,7 @@ import '../services/gallery_service.dart';
 import '../services/shared_reels.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
+import '../widgets/celebration.dart';
 import '../widgets/common.dart';
 import '../widgets/gallery.dart';
 import 'account_sheet.dart';
@@ -166,6 +167,8 @@ class _ProviderSetupScreenState extends State<ProviderSetupScreen> {
       return;
     }
     final nav = Navigator.of(context);
+    final overlay = Celebration.overlayOf(context);
+    final firstTime = widget.existing == null;
     setState(() {
       saving = true;
       error = null;
@@ -192,6 +195,14 @@ class _ProviderSetupScreenState extends State<ProviderSetupScreen> {
         GalleryService.delete(url);
       }
       removed.clear();
+      if (firstTime) {
+        Celebration.show(
+          overlay,
+          title: 'You\'re live!',
+          message: 'Customers planning events nearby can now find ${nameCtrl.text.trim()}.',
+          emoji: '🚀',
+        );
+      }
       if (nav.canPop()) nav.pop();
     } catch (e) {
       if (mounted) setState(() => error = 'Could not save: $e');

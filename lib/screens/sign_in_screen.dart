@@ -6,6 +6,7 @@ import '../services/account_service.dart';
 import '../services/referrals.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
+import '../widgets/celebration.dart';
 import '../widgets/common.dart';
 
 /// Sign in or create an account, as a customer (planning an event)
@@ -71,6 +72,7 @@ class _SignInScreenState extends State<SignInScreen> {
     final carry = List.of(state.events);
     final nav = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    final overlay = Celebration.overlayOf(context);
     setState(() {
       busy = true;
       error = null;
@@ -79,7 +81,11 @@ class _SignInScreenState extends State<SignInScreen> {
       await action(a);
       await state.afterSignIn(role, carry);
       final notice = state.takeReferralNotice();
-      if (notice != null) messenger.showSnackBar(SnackBar(content: Text(notice)));
+      if (notice != null && notice.startsWith('Friend')) {
+        Celebration.show(overlay, title: 'A week of Pro, on us!', message: 'Your friend\'s code worked. You both get a week of Pro free.', emoji: '🎁');
+      } else if (notice != null) {
+        messenger.showSnackBar(SnackBar(content: Text(notice)));
+      }
       if (mounted) nav.pop(true);
     } on FirebaseAuthException catch (e) {
       if (mounted) setState(() => error = _message(e));
