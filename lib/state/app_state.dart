@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -66,6 +67,14 @@ class AppState extends ChangeNotifier {
   Tier get tier {
     if (kDebugMode && devTier != null) return devTier!;
     if (!isSignedIn) return Tier.free;
+    final paid = paidTier;
+    if (onTrial && trialTier.index > paid.index) return trialTier;
+    return paid;
+  }
+
+  /// The plan that's paid for (set in users/{uid}.plan).
+  Tier get paidTier {
+    if (!isSignedIn) return Tier.free;
     final name = profile?['plan'];
     for (final t in Tier.values) {
       if (t.name == name) return t;
@@ -73,6 +82,45 @@ class AppState extends ChangeNotifier {
     // Older values from earlier test builds.
     if (name == 'host' || profile?['premium'] == true) return Tier.pro;
     return Tier.free;
+  }
+
+  // ---------- 3-day free trial ----------
+
+  static const trialLength = Duration(days: 3);
+
+  /// True once this account has started its one free trial.
+  bool get trialUsed => isSignedIn && profile?['trialStartedAt'] != null;
+
+  Tier get trialTier => profile?['trialPlan'] == 'pro' ? Tier.pro : Tier.basic;
+
+  DateTime? get trialEndsAt {
+    final started = profile?['trialStartedAt'];
+    if (started is Timestamp) return started.toDate().add(trialLength);
+    return null;
+  }
+
+  bool get onTrial {
+    final ends = trialEndsAt;
+    return isSignedIn && ends != null && profile?['trialCancelled'] != true && DateTime.now().isBefore(ends);
+  }
+
+  /// The trial ran out (or was cancelled) and no plan is paid for.
+  bool get trialEnded => trialUsed && !onTrial && paidTier == Tier.free;
+
+  Future<void> startTrial(Tier t) async {
+    final a = accounts;
+    if (a == null) return;
+    await a.startTrial(t.name);
+    await _loadAccount();
+    notifyListeners();
+  }
+
+  Future<void> cancelTrial() async {
+    final a = accounts;
+    if (a == null) return;
+    await a.cancelTrial();
+    await _loadAccount();
+    notifyListeners();
   }
 
   bool atLeast(Tier t) => tier.index >= t.index;

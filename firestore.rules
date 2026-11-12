@@ -9,16 +9,41 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    // Free trial fields: trialPlan, trialStartedAt (server time), trialCancelled.
+    function sameTrial(before, after) {
+      return after.get('trialPlan', null) == before.get('trialPlan', null)
+        && after.get('trialStartedAt', null) == before.get('trialStartedAt', null)
+        && after.get('trialCancelled', null) == before.get('trialCancelled', null);
+    }
+    // One trial per account, started now (server clock), never extended.
+    function startsTrial(before, after) {
+      return before.get('trialStartedAt', null) == null
+        && after.get('trialPlan', null) in ['basic', 'pro']
+        && after.get('trialStartedAt', null) == request.time
+        && after.get('trialCancelled', null) == null;
+    }
+    // Cancelling only ends the trial early.
+    function cancelsTrial(before, after) {
+      return before.get('trialStartedAt', null) != null
+        && after.get('trialPlan', null) == before.get('trialPlan', null)
+        && after.get('trialStartedAt', null) == before.get('trialStartedAt', null)
+        && after.get('trialCancelled', null) == true;
+    }
+
     // Profile: role, name, email. `plan` ('basic' | 'pro') and `premium` are set
     // only by you in the console (later by the payment system), never by the app.
     match /users/{uid} {
       allow read, delete: if isOwner(uid);
       allow create: if isOwner(uid)
         && !('premium' in request.resource.data)
-        && !('plan' in request.resource.data);
+        && !('plan' in request.resource.data)
+        && (sameTrial({}, request.resource.data) || startsTrial({}, request.resource.data));
       allow update: if isOwner(uid)
         && request.resource.data.get('premium', null) == resource.data.get('premium', null)
-        && request.resource.data.get('plan', null) == resource.data.get('plan', null);
+        && request.resource.data.get('plan', null) == resource.data.get('plan', null)
+        && (sameTrial(resource.data, request.resource.data)
+            || startsTrial(resource.data, request.resource.data)
+            || cancelsTrial(resource.data, request.resource.data));
 
       // Each person can only read and write their own events.
       match /events/{eventId} {

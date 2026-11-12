@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../state/app_state.dart';
 import '../theme.dart';
@@ -93,6 +94,23 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
       ));
       if (ok != true) return;
     }
+    // Each account gets one 3-day free trial.
+    if (!state.trialUsed && state.paidTier.index < offer.tier.index) {
+      try {
+        await state.startTrial(offer.tier);
+        final ends = state.trialEndsAt;
+        messenger.showSnackBar(SnackBar(
+          content: Text(
+            'Your 3-day ${offer.tier.label} trial has started'
+            '${ends == null ? '' : ' and ends ${DateFormat('EEE, MMM d').format(ends)}'}. Cancel anytime from Account.',
+          ),
+        ));
+        if (mounted) nav.pop();
+      } catch (e) {
+        messenger.showSnackBar(SnackBar(content: Text('Could not start the trial: $e')));
+      }
+      return;
+    }
     final price = yearly ? '\$${offer.yearly.toStringAsFixed(2)}/year' : '\$${offer.monthly.toStringAsFixed(2)}/month';
     messenger.showSnackBar(SnackBar(
       content: Text('Payments are coming soon. ${offer.tier.label} ($price) will be ready in the next update.'),
@@ -124,11 +142,34 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
                 Text('Choose your plan', style: display(32, color: Colors.white)),
                 const SizedBox(height: 6),
                 Text(
-                  current == Tier.free
-                      ? 'Start free. Upgrade when you need more for your party.'
-                      : 'You\'re on ${current.label}. Switch anytime.',
+                  state.onTrial
+                      ? 'You\'re trying ${current.label} free until ${DateFormat('EEE, MMM d · h:mm a').format(state.trialEndsAt!)}.'
+                      : state.trialEnded
+                          ? 'Your free trial has ended. Choose a plan to keep going.'
+                          : current == Tier.free
+                              ? 'Start free. Upgrade when you need more for your party.'
+                              : 'You\'re on ${current.label}. Switch anytime.',
                   style: body(15, color: HC.nightMuted),
                 ),
+                if (!state.trialUsed) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(color: HC.lime, borderRadius: BorderRadius.circular(16)),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.card_giftcard_rounded, color: HC.ink),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            '3 days free on any plan. Cancel within 3 days and you pay nothing.',
+                            style: body(14, weight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 18),
                 _BillingToggle(
                   yearly: yearly,
@@ -140,6 +181,8 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
                     offer: offer,
                     yearly: yearly,
                     current: offer.tier == current,
+                    trialAvailable: !state.trialUsed && state.paidTier.index < offer.tier.index,
+                    trialEnds: state.onTrial && state.trialTier == offer.tier ? state.trialEndsAt : null,
                     onChoose: () => _choose(offer),
                   ),
                   const SizedBox(height: 14),
@@ -147,7 +190,9 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
                 _FreeCard(current: current == Tier.free),
                 const SizedBox(height: 16),
                 Text(
-                  'Prices in USD. Cancel anytime in your App Store or Google Play settings. Payments are coming soon.',
+                  'Prices in USD. One 3-day free trial per account. After the trial, your plan renews each month or year '
+                  'until you cancel in your App Store or Google Play settings. Payments are coming soon; until then '
+                  'your plan goes back to Free when the trial ends.',
                   textAlign: TextAlign.center,
                   style: body(12, color: HC.nightMuted),
                 ),
@@ -224,10 +269,21 @@ class _BillingToggle extends StatelessWidget {
 }
 
 class _PlanCard extends StatelessWidget {
-  const _PlanCard({required this.offer, required this.yearly, required this.current, required this.onChoose});
+  const _PlanCard({
+    required this.offer,
+    required this.yearly,
+    required this.current,
+    required this.trialAvailable,
+    required this.onChoose,
+    this.trialEnds,
+  });
   final PlanOffer offer;
   final bool yearly;
   final bool current;
+  final bool trialAvailable;
+
+  /// Set when this plan is on its free trial right now.
+  final DateTime? trialEnds;
   final VoidCallback onChoose;
 
   @override
@@ -260,7 +316,7 @@ class _PlanCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(color: HC.track, borderRadius: BorderRadius.circular(8)),
-                  child: Text('Your plan', style: body(11, weight: FontWeight.w700)),
+                  child: Text(trialEnds != null ? 'Free trial' : 'Your plan', style: body(11, weight: FontWeight.w700)),
                 ),
             ],
           ),
@@ -316,11 +372,30 @@ class _PlanCard extends StatelessWidget {
               ),
               onPressed: current ? null : onChoose,
               child: Text(
-                current ? 'Current plan' : 'Choose ${offer.tier.label}',
+                current
+                    ? 'Current plan'
+                    : trialAvailable
+                        ? 'Start 3-day free trial'
+                        : 'Choose ${offer.tier.label}',
                 style: body(15, weight: FontWeight.w600, color: current ? HC.muted : Colors.white),
               ),
             ),
           ),
+          if (trialEnds != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Trial ends ${DateFormat('EEE, MMM d · h:mm a').format(trialEnds!)}. Cancel anytime from Account.',
+              textAlign: TextAlign.center,
+              style: body(12, color: HC.muted),
+            ),
+          ] else if (trialAvailable && !current) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Free for 3 days, then \$${price.toStringAsFixed(2)}/${yearly ? 'year' : 'month'}. Cancel anytime.',
+              textAlign: TextAlign.center,
+              style: body(12, color: HC.muted),
+            ),
+          ],
         ],
       ),
     );

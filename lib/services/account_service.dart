@@ -137,6 +137,26 @@ class AccountService {
     }, SetOptions(merge: true));
   }
 
+  // ---------- free trial ----------
+
+  /// Starts the one 3-day free trial of a plan ('basic' or 'pro').
+  /// The start time comes from the server so it can't be faked.
+  Future<void> startTrial(String plan) async {
+    final u = user;
+    if (u == null || u.isAnonymous) throw StateError('Sign in first.');
+    await _userDoc(u.uid).set({
+      'trialPlan': plan,
+      'trialStartedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Ends the trial now. It can't be started again on this account.
+  Future<void> cancelTrial() async {
+    final u = user;
+    if (u == null || u.isAnonymous) return;
+    await _userDoc(u.uid).set({'trialCancelled': true}, SetOptions(merge: true));
+  }
+
   // ---------- providers ----------
 
   Future<ProviderProfile?> loadProvider() async {

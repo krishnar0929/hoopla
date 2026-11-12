@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../services/account_service.dart';
 import '../state/app_state.dart';
@@ -21,6 +22,33 @@ void showAccountSheet(BuildContext context) {
 
 class _AccountSheet extends StatelessWidget {
   const _AccountSheet();
+
+  Future<void> _cancelTrial(BuildContext context) async {
+    final state = AppScope.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Cancel your free trial?'),
+        content: const Text('Your plan goes back to Free now and you won\'t be charged. Each account gets one free trial.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Keep trial')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: _danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Cancel trial'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await state.cancelTrial();
+      messenger.showSnackBar(const SnackBar(content: Text('Trial cancelled. You won\'t be charged.')));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Could not cancel: $e')));
+    }
+  }
 
   Future<void> _delete(BuildContext context) async {
     final state = AppScope.of(context);
@@ -82,9 +110,27 @@ class _AccountSheet extends StatelessWidget {
         Text(state.email ?? 'Signed in', style: body(15, weight: FontWeight.w600)),
         const SizedBox(height: 2),
         Text(
-          '${state.isProvider ? 'Provider' : 'Customer'} · ${state.tier.label} plan',
+          '${state.isProvider ? 'Provider' : 'Customer'} · ${state.tier.label} plan${state.onTrial ? ' (free trial)' : ''}',
           style: body(13, color: HC.muted),
         ),
+        if (state.onTrial) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: HC.lime, borderRadius: BorderRadius.circular(14)),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Free trial ends ${DateFormat('EEE, MMM d · h:mm a').format(state.trialEndsAt!)}.',
+                    style: body(13, weight: FontWeight.w600),
+                  ),
+                ),
+                TextButton(onPressed: () => _cancelTrial(context), child: const Text('Cancel trial')),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 16),
         if (state.tier != Tier.pro)
           _SheetButton(label: state.isPremium ? 'Change plan' : 'See plans', filled: true, onTap: () => open(const UpgradeScreen())),
