@@ -5,6 +5,7 @@
 #   ./scripts/testflight.sh             raise build number, build, deliver
 #   ./scripts/testflight.sh --no-bump   build and deliver with the current build number
 #   ./scripts/testflight.sh --open      build, then open the .ipa in the Transporter app (you click Deliver)
+#   ./scripts/testflight.sh --transporter  upload with Transporter's command-line tool instead of altool
 #
 # One-time setup: save your app-specific password (from account.apple.com) in the Mac keychain:
 #   security add-generic-password -U -a "krishna.mula9@gmail.com" -s "AC_PASSWORD" -w "xxxx-xxxx-xxxx-xxxx"
@@ -18,10 +19,12 @@ cd "$(dirname "$0")/.."
 
 BUMP=1
 OPEN=0
+USE_TRANSPORTER=0
 for arg in "$@"; do
   case "$arg" in
     --no-bump) BUMP=0 ;;
     --open) OPEN=1 ;;
+    --transporter) USE_TRANSPORTER=1 ;;
     *) echo "Unknown option: $arg"; exit 1 ;;
   esac
 done
@@ -56,11 +59,11 @@ if [ -z "$password" ]; then
   exit 1
 fi
 
-if [ -x "$TRANSPORTER" ]; then
+if [ "$USE_TRANSPORTER" = 1 ] && [ -x "$TRANSPORTER" ]; then
   echo "==> Delivering with Transporter..."
   "$TRANSPORTER" -m upload -assetFile "$ipa" -u "$APPLE_ID" -p "$password" -v informational
 else
-  echo "==> Transporter app not found; delivering with altool..."
+  echo "==> Delivering to App Store Connect with altool..."
   xcrun altool --upload-app -t ios -f "$ipa" -u "$APPLE_ID" -p "$password"
 fi
 
