@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../firebase_options.dart';
 import '../models/provider_profile.dart';
 import 'event_store.dart';
 
@@ -62,7 +63,17 @@ class AccountService {
         await _auth.signInWithPopup(provider);
       }
     } else {
-      final account = await GoogleSignIn(scopes: const ['email']).signIn();
+      // Without the iPhone Google client ID, Google's library crashes the app,
+      // so stop here with a clear message instead.
+      // Fix: flutterfire configure, then scripts/setup_google_ios.sh (see README).
+      final clientId = DefaultFirebaseOptions.currentPlatform.iosClientId;
+      if (defaultTargetPlatform == TargetPlatform.iOS && (clientId == null || clientId.isEmpty)) {
+        throw FirebaseAuthException(
+          code: 'google-not-set-up',
+          message: 'Google sign-in isn\'t ready on iPhone yet. Please use Apple or email for now.',
+        );
+      }
+      final account = await GoogleSignIn(clientId: clientId, scopes: const ['email']).signIn();
       if (account == null) throw FirebaseAuthException(code: 'canceled');
       final tokens = await account.authentication;
       final credential = GoogleAuthProvider.credential(idToken: tokens.idToken, accessToken: tokens.accessToken);
