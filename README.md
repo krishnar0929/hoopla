@@ -115,3 +115,65 @@ Yearly: $29.99 / $79.99. Prices and features live in `planOffers` in `lib/screen
 - **Verified badge:** set `providers/{uid}.verified = true` in the console.
 - **Events:** ⋯ menu on the plan → Start new event, My events, Cancel this event (restorable).
 - **Delete account:** Account → Delete account (Apple requires this).
+
+## Refer a friend, feedback and ratings
+
+**Refer a friend** (Account → Refer a friend, also on the Plans page). Each signed-in person gets a
+6-character invite code. When a friend signs up and enters it, you **both get 1 week of Pro free**.
+Every extra friend adds another week on the end.
+
+- `refCodes/{CODE}` says who owns a code. `users/{uid}.refCode` holds your own code.
+- `referrals/{friendUid}` is written once per account when a friend joins with a code.
+  Its `createdAt` is server time, so the free week can't be faked.
+- Invite links look like `https://hoopla-894ca.web.app/?ref=CODE`. The web app keeps the code
+  and applies it after sign-up. In the phone app, friends type the code on the sign-up screen.
+
+**Help & feedback** (Account → Help, feedback & rate Hoopla):
+
+- Email us opens mail to northbitapps@gmail.com.
+- Send feedback / Report a problem saves type, star rating and comments to the `feedback`
+  collection. Read it in the Firebase console (Firestore → feedback). The app can't read it back.
+- Rate Hoopla: 4–5 stars opens Apple's review pop-up (or the App Store page), 1–3 stars opens the
+  feedback form so you hear about problems first.
+- After a couple of party-mode games finish, Hoopla asks "Enjoying Hoopla?" once.
+
+Deploy the rules after pulling: `firebase deploy --only firestore:rules`.
+
+## Provider photo gallery
+
+Providers add up to 12 photos of their work (plus their Instagram and website) when they set up
+or edit their listing. Customers see the photos on each provider in Nearby and on the provider's
+full page, and can open them full screen.
+
+Photos are stored in Firebase Storage at `providers/{uid}/gallery/`. One-time setup:
+
+1. Firebase console → Build → Storage → Get started (needs the Blaze plan on new projects).
+2. `firebase deploy --only storage`
+3. For the web app to show photos: `gsutil cors set cors.json gs://BUCKET` (the bucket name is
+   `storageBucket` in `lib/firebase_options.dart`).
+
+## Social links and ratings & reviews
+
+- Providers can add Instagram, Facebook, YouTube, TikTok, a link to their reviews elsewhere
+  (Google, Yelp, WeddingWire) and a website, plus up to 6 featured reel/video links.
+  Customers see them as buttons on the provider's page; each opens in its app.
+- Customers rate providers 1–5 stars with a comment at `providers/{uid}/reviews/{reviewerUid}`
+  (one review per customer per provider, editable). The average shows on every provider in Nearby.
+  Providers can reply to reviews from their home screen.
+- Instagram doesn't let other apps show someone's photos without that person connecting their
+  account (Meta's Instagram API, needs app review), so the in-app gallery uses photos providers
+  upload, and Instagram opens in the Instagram app.
+
+## Reminders (free, phone app)
+
+Scheduled on the phone with `flutter_local_notifications`: no server, works offline, shows even
+when Hoopla is closed. The website shows a note instead.
+
+- Each unchecked checklist task reminds at 9 AM (changeable) on its due day; same-day tasks are
+  grouped. Overdue tasks get one catch-up reminder. Ticking a task off cancels it.
+- Countdown: 1 week before, 6 PM the evening before, and the morning of the party.
+- The bell on a task sets your own date and time for it (saved on the event as `taskReminders`).
+- Hoopla asks "Want reminders?" once, right after the first party is planned. The switch above
+  the checklist turns them on or off.
+- Everything is recalculated whenever an event changes (`AppState.syncReminders`), keeping the
+  soonest 60 (iOS allows 64). Rules live in `lib/services/reminder_plan.dart` (tested).

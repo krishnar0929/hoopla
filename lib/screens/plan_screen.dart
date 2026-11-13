@@ -9,6 +9,7 @@ import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/locked.dart';
+import '../widgets/reminder_ui.dart';
 import 'account_sheet.dart';
 import 'event_actions.dart';
 import 'setup_screen.dart';
@@ -312,6 +313,7 @@ class _Checklist extends StatelessWidget {
     final fmt = DateFormat('MMM d');
     return Column(
       children: [
+        const RemindersCard(),
         for (final t in tasks)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
@@ -334,7 +336,13 @@ class _Checklist extends StatelessWidget {
                     style: body(14, weight: FontWeight.w500, color: e.doneTasks.contains(t.id) ? HC.muted : HC.ink).copyWith(
                       decoration: e.doneTasks.contains(t.id) ? TextDecoration.lineThrough : null,
                     )),
-                secondary: Text('By ${fmt.format(e.date.subtract(Duration(days: t.daysBefore)))}', style: body(12, color: HC.muted)),
+                secondary: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('By ${fmt.format(e.date.subtract(Duration(days: t.daysBefore)))}', style: body(12, color: HC.muted)),
+                    if (!e.doneTasks.contains(t.id)) TaskReminderButton(task: t, event: e),
+                  ],
+                ),
               ),
             ),
           ),

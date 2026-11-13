@@ -12,6 +12,7 @@ import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/locked.dart';
+import 'feedback_sheet.dart';
 
 /// Party day mode: current game with a timer, scoreboard and what's next.
 class PartyScreen extends StatefulWidget {
@@ -58,6 +59,10 @@ class _PartyScreenState extends State<PartyScreen> {
           timer?.cancel();
           running = false;
           HapticFeedback.heavyImpact();
+          // A game just finished: a good moment to ask for a rating (once).
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) RatePrompt.afterHappyMoment(context);
+          });
         }
       });
     });

@@ -4,7 +4,9 @@ import 'package:intl/intl.dart';
 
 import '../state/app_state.dart';
 import '../theme.dart';
+import '../widgets/celebration.dart';
 import '../widgets/common.dart';
+import 'refer_screen.dart';
 import 'sign_in_screen.dart';
 
 /// One paid plan as shown on the subscription page. Edit prices and features here.
@@ -88,6 +90,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
     final state = AppScope.of(context);
     final nav = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    final overlay = Celebration.overlayOf(context);
     if (!state.isSignedIn) {
       final ok = await nav.push<bool>(MaterialPageRoute(
         builder: (_) => const SignInScreen(reason: 'Sign in first so your plan stays with your account on every device.'),
@@ -98,6 +101,7 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
     if (!state.trialUsed && state.paidTier.index < offer.tier.index) {
       try {
         await state.startTrial(offer.tier);
+        Celebration.show(overlay, title: 'Welcome to ${offer.tier.label}!', message: 'Your 3-day free trial has started. Enjoy!', emoji: '✨');
         final ends = state.trialEndsAt;
         messenger.showSnackBar(SnackBar(
           content: Text(
@@ -188,6 +192,21 @@ class _UpgradeScreenState extends State<UpgradeScreen> {
                   const SizedBox(height: 14),
                 ],
                 _FreeCard(current: current == Tier.free),
+                const SizedBox(height: 14),
+                CardBox(
+                  color: HC.lime,
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ReferScreen())),
+                  child: Row(
+                    children: [
+                      const Text('🎁', style: TextStyle(fontSize: 26)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text('Or get Pro free: invite a friend and you both get a week of Pro.', style: body(14, weight: FontWeight.w600)),
+                      ),
+                      const Icon(Icons.chevron_right_rounded),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 16),
                 Text(
                   'Prices in USD. One 3-day free trial per account. After the trial, your plan renews each month or year '

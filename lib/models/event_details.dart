@@ -65,6 +65,7 @@ class EventDetails {
     List<String>? doneTasks,
     List<ShortlistVendor>? shortlist,
     List<SavedLink>? savedLinks,
+    Map<String, DateTime>? taskReminders,
     this.budget,
     this.status = 'active',
     DateTime? updatedAt,
@@ -72,6 +73,7 @@ class EventDetails {
         doneTasks = doneTasks ?? [],
         shortlist = shortlist ?? [],
         savedLinks = savedLinks ?? [],
+        taskReminders = taskReminders ?? {},
         updatedAt = updatedAt ?? DateTime.now();
 
   final String id;
@@ -92,6 +94,9 @@ class EventDetails {
   List<String> doneTasks;
   List<ShortlistVendor> shortlist;
   List<SavedLink> savedLinks;
+
+  /// Reminders the user set on checklist tasks: task id → when to remind.
+  Map<String, DateTime> taskReminders;
   double? budget;
 
   /// 'active' or 'cancelled'. Cancelled events stay in My events and can be restored.
@@ -124,6 +129,7 @@ class EventDetails {
         'doneTasks': doneTasks,
         'shortlist': shortlist.map((v) => v.toMap()).toList(),
         'savedLinks': savedLinks.map((l) => l.toMap()).toList(),
+        'taskReminders': {for (final r in taskReminders.entries) r.key: r.value.toUtc().toIso8601String()},
         'budget': budget,
         'status': status,
         'updatedAt': updatedAt.toUtc().toIso8601String(),
@@ -147,6 +153,10 @@ class EventDetails {
       doneTasks: List<String>.from(m['doneTasks'] as List? ?? const []),
       shortlist: maps(m['shortlist']).map(ShortlistVendor.fromMap).toList(),
       savedLinks: maps(m['savedLinks']).map(SavedLink.fromMap).toList(),
+      taskReminders: {
+        for (final r in (m['taskReminders'] as Map? ?? const {}).entries)
+          if (DateTime.tryParse('${r.value}') != null) '${r.key}': DateTime.parse('${r.value}').toLocal(),
+      },
       budget: (m['budget'] as num?)?.toDouble(),
       status: m['status'] as String? ?? 'active',
       updatedAt: DateTime.tryParse(m['updatedAt'] as String? ?? '')?.toLocal(),

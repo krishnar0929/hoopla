@@ -11,7 +11,11 @@ import '../services/search_log.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../data/sample_providers.dart';
+import '../widgets/gallery.dart';
+import '../widgets/reviews.dart';
 import '../widgets/locked.dart';
+import 'provider_detail_screen.dart';
 
 /// Find photographers, panthulu, decorators and more, and keep a shortlist.
 class NearbyScreen extends StatefulWidget {
@@ -235,16 +239,30 @@ class _NearbyScreenState extends State<NearbyScreen> {
                   child: Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
                 );
               }
-              final list = snap.data ?? const <ProviderProfile>[];
-              if (snap.hasError || list.isEmpty) {
+              final list = snap.hasError ? const <ProviderProfile>[] : (snap.data ?? const <ProviderProfile>[]);
+              final samples = showSampleProviders && list.length < 3 ? sampleProvidersFor(selected).take(3 - list.length).toList() : const <ProviderProfile>[];
+              if (list.isEmpty && samples.isEmpty) {
                 return Text(
                   'No ${selected.toLowerCase()} have joined Hoopla yet. Use the map above meanwhile.',
                   style: body(13, color: HC.muted),
                 );
               }
               return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   for (var i = 0; i < list.length; i++) _ProviderCard(provider: list[i], tile: HC.tiles[i % HC.tiles.length]),
+                  if (samples.isNotEmpty) ...[
+                    Padding(
+                      padding: EdgeInsets.only(top: list.isEmpty ? 0 : 8, bottom: 8),
+                      child: Text(
+                        list.isEmpty
+                            ? 'Sample listings: this is how ${selected.toLowerCase()} will look once they join Hoopla near you.'
+                            : 'More sample listings, to show how Hoopla works:',
+                        style: body(12, color: HC.muted),
+                      ),
+                    ),
+                    for (var i = 0; i < samples.length; i++) _ProviderCard(provider: samples[i], tile: HC.tiles[(i + 2) % HC.tiles.length]),
+                  ],
                 ],
               );
             },
@@ -388,19 +406,52 @@ class _ProviderCard extends StatelessWidget {
     final saved = e.shortlist.any((v) => v.id == p.uid);
     final details = [p.city, if (p.priceRange.isNotEmpty) p.priceRange].join(' · ');
 
+    /// Real listings call/message; sample listings explain what they are.
+    VoidCallback? contact(VoidCallback action) {
+      if (p.isSample) return () => toast(context, sampleContactNote);
+      return hasPhone ? action : null;
+    }
+
+    void openDetails() => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => ProviderDetailScreen(provider: p, quote: quote)),
+        );
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: CardBox(
         padding: const EdgeInsets.all(10),
-        child: Row(
+        onTap: openDetails,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (p.photos.length > 1) ...[
+              SizedBox(
+                height: 92,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: p.photos.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 6),
+                  itemBuilder: (context, i) => GestureDetector(
+                    onTap: () => openPhotoViewer(context, p.photos, i),
+                    child: SizedBox(width: 92, child: GalleryImage(p.photos[i], radius: 12)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+            Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
+            SizedBox(
               width: 76,
               height: 76,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(color: tile, borderRadius: BorderRadius.circular(14)),
-              child: Text(p.businessName.isEmpty ? '?' : p.businessName[0].toUpperCase(), style: display(28)),
+              child: p.photos.isNotEmpty
+                  ? GalleryImage(p.photos.first, radius: 14)
+                  : Container(
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(color: tile, borderRadius: BorderRadius.circular(14)),
+                      child: Text(p.businessName.isEmpty ? '?' : p.businessName[0].toUpperCase(), style: display(28)),
+                    ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -410,12 +461,17 @@ class _ProviderCard extends StatelessWidget {
                   Row(
                     children: [
                       Flexible(child: Text(p.businessName, style: body(15, weight: FontWeight.w600))),
+                      if (p.isSample) ...[
+                        const SizedBox(width: 6),
+                        const SampleTag(),
+                      ],
                       if (p.verified) ...[
                         const SizedBox(width: 4),
                         const Icon(Icons.verified_rounded, size: 16, color: HC.violet, semanticLabel: 'Verified'),
                       ],
                     ],
                   ),
+                  RatingBadge(providerUid: p.uid),
                   if (details.isNotEmpty) Text(details, style: body(12, color: HC.muted)),
                   if (p.about.isNotEmpty)
                     Padding(
@@ -427,17 +483,18 @@ class _ProviderCard extends StatelessWidget {
                     spacing: 6,
                     runSpacing: 6,
                     children: [
-                      _SmallButton(label: 'Call', onTap: hasPhone ? () => openLink(context, Uri(scheme: 'tel', path: digits)) : null),
+                      _SmallButton(label: 'Call', onTap: contact(() => openLink(context, Uri(scheme: 'tel', path: digits)))),
                       _SmallButton(
                         label: 'WhatsApp',
-                        onTap: hasPhone ? () => openLink(context, Uri.https('wa.me', '/$digits', {'text': quote})) : null,
+                        onTap: contact(() => openLink(context, Uri.https('wa.me', '/$digits', {'text': quote}))),
                       ),
                       _SmallButton(
                         label: 'Get quote',
                         dark: true,
-                        onTap: hasPhone ? () => openLink(context, Uri(scheme: 'sms', path: digits, queryParameters: {'body': quote})) : null,
+                        onTap: contact(() => openLink(context, Uri(scheme: 'sms', path: digits, queryParameters: {'body': quote}))),
                       ),
-                      _SmallButton(
+                      if (!p.isSample)
+                        _SmallButton(
                         label: saved ? 'Saved' : 'Save',
                         onTap: saved
                             ? null
@@ -449,11 +506,14 @@ class _ProviderCard extends StatelessWidget {
                                   note: p.priceRange,
                                 ))),
                       ),
+                      _SmallButton(label: p.photos.isEmpty ? 'Details' : 'See work', onTap: openDetails),
                     ],
                   ),
                 ],
               ),
             ),
+          ],
+        ),
           ],
         ),
       ),

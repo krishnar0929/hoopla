@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../services/account_service.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
+import 'help_screen.dart';
+import 'refer_screen.dart';
 import 'sign_in_screen.dart';
 import 'upgrade_screen.dart';
 
@@ -110,7 +112,8 @@ class _AccountSheet extends StatelessWidget {
         Text(state.email ?? 'Signed in', style: body(15, weight: FontWeight.w600)),
         const SizedBox(height: 2),
         Text(
-          '${state.isProvider ? 'Provider' : 'Customer'} · ${state.tier.label} plan${state.onTrial ? ' (free trial)' : ''}',
+          '${state.isProvider ? 'Provider' : 'Customer'} · ${state.tier.label} plan'
+          '${state.onReferralBonus && state.paidTier != Tier.pro ? ' (friend bonus until ${DateFormat('MMM d').format(state.bonusProUntil!)})' : state.onTrial ? ' (free trial)' : ''}',
           style: body(13, color: HC.muted),
         ),
         if (state.onTrial) ...[
@@ -164,10 +167,18 @@ class _AccountSheet extends StatelessWidget {
       ]);
     }
 
+    children.insertAll(children.length - (state.isSignedIn && state.usingCloud ? 2 : 0), [
+      const Divider(color: HC.line, height: 20),
+      _SheetButton(label: '🎁  Refer a friend · you both get a week of Pro', onTap: () => open(const ReferScreen())),
+      _SheetButton(label: 'Help, feedback & rate Hoopla', onTap: () => open(const HelpScreen())),
+    ]);
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+        child: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+        ),
       ),
     );
   }

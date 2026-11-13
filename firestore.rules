@@ -8,6 +8,18 @@ service cloud.firestore {
     function isOwner(uid) {
       return signedIn() && request.auth.uid == uid;
     }
+    function validReview(d) {
+      return d.keys().hasOnly(['stars', 'comment', 'name', 'eventType', 'createdAt', 'updatedAt', 'reply'])
+        && d.stars is int && d.stars >= 1 && d.stars <= 5
+        && d.comment is string && d.comment.size() <= 1000
+        && d.name is string && d.name.size() <= 60
+        && d.eventType is string && d.eventType.size() <= 40
+        && d.updatedAt == request.time;
+    }
+    // A real account, not an anonymous guest.
+    function hasAccount() {
+      return signedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
 
     // Free trial fields: trialPlan, trialStartedAt (server time), trialCancelled.
     function sameTrial(before, after) {
@@ -59,6 +71,70 @@ service cloud.firestore {
       allow create: if isOwner(uid) && request.resource.data.get('verified', false) == false;
       allow update: if isOwner(uid)
         && request.resource.data.get('verified', false) == resource.data.get('verified', false);
+
+      // Ratings & reviews: one per customer per provider (doc id = reviewer's uid).
+      // Anyone using the app can read them. Only the reviewer writes stars and
+      // comment; only the provider writes the reply.
+      match /reviews/{reviewerUid} {
+        allow read: if signedIn();
+        allow create: if isOwner(reviewerUid) && hasAccount()
+          && reviewerUid != uid
+          && validReview(request.resource.data)
+          && request.resource.data.reply == ''
+          && request.resource.data.createdAt == request.time;
+        allow update: if (isOwner(reviewerUid)
+            && validReview(request.resource.data)
+            && request.resource.data.reply == resource.data.get('reply', '')
+            && request.resource.data.createdAt == resource.data.createdAt)
+          || (isOwner(uid)
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reply', 'repliedAt'])
+            && request.resource.data.reply is string
+            && request.resource.data.reply.size() <= 500
+            && request.resource.data.repliedAt == request.time);
+        allow delete: if isOwner(reviewerUid);
+      }
+    }
+
+    // Feedback and ratings from the app (Help & feedback). Guests can send it too.
+    // The app can add feedback but never read, change or delete it. Read it in the console.
+    match /feedback/{id} {
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'type', 'rating', 'message', 'email', 'plan', 'platform', 'appVersion', 'createdAt'])
+        && request.resource.data.type in ['idea', 'problem', 'praise', 'other']
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 0 && request.resource.data.rating <= 5
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 2000
+        && (request.resource.data.email == null || (request.resource.data.email is string && request.resource.data.email.size() <= 200))
+        && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if false;
+    }
+
+    // Refer a friend: who owns each invite code. Codes are never changed or reused.
+    match /refCodes/{code} {
+      allow read: if signedIn();
+      allow create: if hasAccount()
+        && code.matches('^[ABCDEFGHJKMNPQRSTUVWXYZ2-9]{6}$')
+        && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
+    // One per account, ever: "I joined with this friend's code". Both people get
+    // a week of Pro from createdAt (server time). The friend who shared the code
+    // can see who joined with it.
+    match /referrals/{friendUid} {
+      allow read: if isOwner(friendUid)
+        || (signedIn() && resource.data.referrerUid == request.auth.uid);
+      allow create: if isOwner(friendUid) && hasAccount()
+        && request.resource.data.keys().hasOnly(['code', 'referrerUid', 'createdAt'])
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.referrerUid != request.auth.uid
+        && get(/databases/$(database)/documents/refCodes/$(request.resource.data.code)).data.uid
+             == request.resource.data.referrerUid;
+      allow update, delete: if false;
     }
 
     // Search history. The app can add an entry for its own user but can never
