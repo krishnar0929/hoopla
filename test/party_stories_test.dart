@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hoopla/data/games.dart';
 import 'package:hoopla/data/party_stories.dart';
 import 'package:hoopla/models/event_details.dart';
+import 'package:hoopla/widgets/gallery.dart';
 
 void main() {
   test('20 sample stories, each complete', () {
@@ -22,5 +23,13 @@ void main() {
 
   test('the first story is Vir\'s 1st birthday', () {
     expect(partyStories.first.title, "Vir's 1st birthday");
+  });
+
+  test('sample photos are drawn by the app', () {
+    final url = partyStories.first.photos.first;
+    final p = SamplePhoto.parse(url)!;
+    expect(p.emoji, '🎂');
+    expect(SamplePhoto.parse('https://example.com/a.jpg'), isNull);
+    expect(SamplePhoto.parse(SamplePhoto.url('🎈', 3))!.color, 3);
   });
 }

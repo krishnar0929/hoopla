@@ -143,6 +143,15 @@ const _reviews = <List<Object>>[
   ['Caterers', 0, 'Rahul V.', 'Housewarming', 5, 'Live dosa station was the star of the day.', ''],
 ];
 
+/// Pictures for the sample listings (drawn by the app, see SamplePhoto).
+const _serviceEmoji = {
+  'Photographers': '📸', 'Videographers': '🎥', 'Decorators': '🎈', 'Stage decor': '🌸', 'Event planners': '📋',
+  'Designers': '🎨', 'Cake makers': '🎂', 'Panthulu': '🪔', 'Makeup': '💄', 'Cleaners & maids': '🧹',
+  'Helpers': '🙌', 'Transport': '🚐', 'Anchors / MC': '🎤', 'DJs': '🎧', 'Singers': '🎶', 'Dancers': '💃',
+  'Caterers': '🍛', 'Rentals': '🪑',
+};
+const _partyEmoji = ['🎉', '🎈', '✨', '🥳', '🎁', '🌼', '🍰', '🎊'];
+
 String sampleId(String type, int i) => 'sample-${_slug(type)}-${i + 1}';
 
 /// The 3 sample listings for a service type (empty if there are none).
@@ -162,7 +171,9 @@ List<ProviderProfile> sampleProvidersFor(String type) {
         phone: '',
         priceRange: rows[i][1],
         about: rows[i][2],
-        photos: [for (var p = 0; p < 6; p++) 'https://picsum.photos/seed/${_slug(rows[i][0])}$p/900/700'],
+        photos: [
+          for (var p = 0; p < 6; p++) 'sample://${Uri.encodeComponent(p == 0 ? (_serviceEmoji[type] ?? '🎉') : _partyEmoji[(p + i) % _partyEmoji.length])}/${(p + i + offset) % 6}',
+        ],
         instagram: i == 2 ? '' : _slug(rows[i][0]),
         website: i == 0 ? '${_slug(rows[i][0])}.example.com' : '',
         featured: i == 2 ? const [] : const ['https://www.instagram.com/reel/C0example1/', 'https://www.youtube.com/shorts/example2'],

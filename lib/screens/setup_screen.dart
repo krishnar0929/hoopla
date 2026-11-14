@@ -282,6 +282,10 @@ class _SetupScreenState extends State<SetupScreen> {
                       Text(editing ? 'Update your party' : 'Throw a party.\nWe\'ll bring the fun.', style: display(32)),
                       const SizedBox(height: 8),
                       Text('Tell us a little about it — we plan the games, timeline and helpers.', style: body(14, color: HC.muted)),
+                      if (!editing && showSampleStories) ...[
+                        const SizedBox(height: 14),
+                        const StoriesLink(),
+                      ],
                       const SizedBox(height: 22),
                       if (!editing) ...[
                         CardBox(
@@ -416,12 +420,7 @@ class _SetupScreenState extends State<SetupScreen> {
                           ),
                         ),
                       ],
-                      if (!editing && showSampleStories) ...[
-                        const SizedBox(height: 28),
-                        const PartyStoriesSection(),
-                        const SizedBox(height: 24),
-                        const HostReviewsSection(),
-                      ],
+
                     ],
                   ),
                 ),

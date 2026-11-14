@@ -47,10 +47,14 @@ class PartyStory {
   /// Sample provider names (see sample_providers.dart).
   final List<String> helpers;
 
-  String get photoSeed => 'hoopla-story-$id';
-  List<String> get photos => [for (var i = 0; i < 6; i++) 'https://picsum.photos/seed/$photoSeed$i/900/700'];
+  /// Drawn by the app (see SamplePhoto in widgets/gallery.dart): the party's emoji, then party moments.
+  List<String> get photos => [
+        for (var i = 0; i < 6; i++) 'sample://${Uri.encodeComponent(i == 0 ? emoji : _moments[(i + id.length) % _moments.length])}/${(i + id.length) % 6}',
+      ];
   String get cover => photos.first;
 }
+
+const _moments = ['🎈', '📸', '🍰', '🎶', '🎁', '🥳', '💐', '🎲'];
 
 const partyStories = <PartyStory>[
   PartyStory(

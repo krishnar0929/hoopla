@@ -32,102 +32,74 @@ Widget _stars(int n, {double size = 14}) => Row(
       children: [for (var i = 1; i <= 5; i++) Icon(i <= n ? Icons.star_rounded : Icons.star_outline_rounded, size: size, color: i <= n ? _gold : HC.muted)],
     );
 
-// ============================================================ sections
+// ============================================================ start-page link
 
-/// "🎉 Celebrated with Hoopla": swipeable story cards, with "See all".
-class PartyStoriesSection extends StatelessWidget {
-  const PartyStoriesSection({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    if (!showSampleStories) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(child: Text('🎉 Celebrated with Hoopla', style: display(20))),
-            TextButton(
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PartyStoriesScreen())),
-              child: const Text('See all 20'),
-            ),
-          ],
-        ),
-        const _SampleNote(),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: 250,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: partyStories.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, i) => SizedBox(width: 220, child: _StoryCard(story: partyStories[i])),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// "💬 What hosts say": swipeable review cards.
-class HostReviewsSection extends StatelessWidget {
-  const HostReviewsSection({super.key});
+/// A small link on the start page: "⭐ 4.8 · Reviews & party stories ›".
+class StoriesLink extends StatelessWidget {
+  const StoriesLink({super.key});
 
   @override
   Widget build(BuildContext context) {
     if (!showSampleStories) return const SizedBox.shrink();
-    final count = partyStories.length;
-    final avg = partyStories.fold<int>(0, (a, s) => a + s.stars) / count;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('💬 What hosts say', style: display(20)),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            _stars(avg.round(), size: 16),
-            const SizedBox(width: 6),
-            Text('${avg.toStringAsFixed(1)} from $count sample reviews', style: body(12, color: HC.muted)),
-          ],
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          height: 190,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: count,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, i) {
-              final s = partyStories[i];
-              return SizedBox(
-                width: 280,
-                child: CardBox(
-                  onTap: () => _openStory(context, s),
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          _stars(s.stars),
-                          const Spacer(),
-                          Text(s.emoji, style: const TextStyle(fontSize: 18)),
-                        ],
+    final avg = partyStories.fold<int>(0, (a, s) => a + s.stars) / partyStories.length;
+    void open(int tab) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => PartyStoriesScreen(initialTab: tab)));
+    return Material(
+      color: HC.card,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: HC.line)),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => open(0),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 64,
+                height: 40,
+                child: Stack(
+                  children: [
+                    for (var i = 0; i < 3; i++)
+                      Positioned(
+                        left: i * 12.0,
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
+                          child: ClipOval(child: GalleryImage(partyStories[i].cover, radius: 0)),
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      Expanded(
-                        child: Text('"${s.review}"', maxLines: 5, overflow: TextOverflow.ellipsis, style: body(13)),
-                      ),
-                      const SizedBox(height: 8),
-                      Text('${s.host} · ${s.title}', maxLines: 1, overflow: TextOverflow.ellipsis, style: body(12, color: HC.muted, weight: FontWeight.w600)),
-                    ],
-                  ),
+                  ],
                 ),
-              );
-            },
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('See how others celebrated', style: body(14, weight: FontWeight.w700)),
+                    Row(
+                      children: [
+                        const Icon(Icons.star_rounded, size: 15, color: _gold),
+                        const SizedBox(width: 2),
+                        Flexible(
+                          child: Text(
+                            '${avg.toStringAsFixed(1)} · ${partyStories.length} party stories & reviews (samples)',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: body(12, color: HC.muted),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(onPressed: () => open(1), child: const Text('Reviews')),
+              const Icon(Icons.chevron_right_rounded, color: HC.muted),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }
@@ -196,10 +168,12 @@ class _StoryCard extends StatelessWidget {
   }
 }
 
-// ============================================================ all stories
+// ============================================================ stories + reviews
 
+/// Two tabs: Party stories (grid with occasion filters) and Reviews.
 class PartyStoriesScreen extends StatefulWidget {
-  const PartyStoriesScreen({super.key});
+  const PartyStoriesScreen({super.key, this.initialTab = 0});
+  final int initialTab;
 
   @override
   State<PartyStoriesScreen> createState() => _PartyStoriesScreenState();
@@ -210,47 +184,158 @@ class _PartyStoriesScreenState extends State<PartyStoriesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      initialIndex: widget.initialTab,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Celebrated with Hoopla'),
+          bottom: TabBar(
+            labelColor: HC.ink,
+            unselectedLabelColor: HC.muted,
+            indicatorColor: HC.violet,
+            indicatorWeight: 3,
+            labelStyle: body(15, weight: FontWeight.w700),
+            tabs: const [Tab(text: '🎉  Party stories'), Tab(text: '💬  Reviews')],
+          ),
+        ),
+        body: TabBarView(children: [_storiesTab(context), _reviewsTab(context)]),
+      ),
+    );
+  }
+
+  Widget _storiesTab(BuildContext context) {
     final kinds = {for (final s in partyStories) s.occasion}.toList();
     final list = [for (final s in partyStories) if (filter == null || s.occasion == filter) s];
     final width = MediaQuery.of(context).size.width;
     final columns = width > 1000 ? 4 : (width > 700 ? 3 : 2);
-    return Scaffold(
-      appBar: AppBar(title: const Text('Celebrated with Hoopla')),
-      body: CustomScrollView(
-        slivers: [
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-            sliver: SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const _SampleNote(),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    Pill(label: 'All', small: true, selected: filter == null, onTap: () => setState(() => filter = null)),
+                    for (final k in kinds) Pill(label: k, small: true, selected: filter == k, onTap: () => setState(() => filter = k)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+          sliver: SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              mainAxisExtent: 250,
+            ),
+            delegate: SliverChildBuilderDelegate((context, i) => _StoryCard(story: list[i]), childCount: list.length),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _reviewsTab(BuildContext context) {
+    final count = partyStories.length;
+    final avg = partyStories.fold<int>(0, (a, s) => a + s.stars) / count;
+    final byStars = {for (var n = 5; n >= 1; n--) n: partyStories.where((s) => s.stars == n).length};
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
+          children: [
+            const _SampleNote(),
+            const SizedBox(height: 12),
+            CardBox(
+              padding: const EdgeInsets.all(16),
+              child: Row(
                 children: [
-                  const _SampleNote(),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                  Column(
                     children: [
-                      Pill(label: 'All', small: true, selected: filter == null, onTap: () => setState(() => filter = null)),
-                      for (final k in kinds) Pill(label: k, small: true, selected: filter == k, onTap: () => setState(() => filter = k)),
+                      Text(avg.toStringAsFixed(1), style: display(40)),
+                      _stars(avg.round(), size: 16),
+                      const SizedBox(height: 2),
+                      Text('$count reviews', style: body(12, color: HC.muted)),
                     ],
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        for (final e in byStars.entries)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Row(
+                              children: [
+                                SizedBox(width: 14, child: Text('${e.key}', style: body(12, color: HC.muted))),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: LinearProgressIndicator(
+                                      value: e.value / count,
+                                      minHeight: 8,
+                                      backgroundColor: HC.track,
+                                      color: _gold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-            sliver: SliverGrid(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: columns,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                mainAxisExtent: 250,
+            const SizedBox(height: 12),
+            for (final s in partyStories)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: CardBox(
+                  onTap: () => _openStory(context, s),
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          SizedBox(width: 40, height: 40, child: ClipOval(child: GalleryImage(s.cover, radius: 0))),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(s.host, style: body(14, weight: FontWeight.w700)),
+                                Text('${s.title} · ${s.month}', maxLines: 1, overflow: TextOverflow.ellipsis, style: body(12, color: HC.muted)),
+                              ],
+                            ),
+                          ),
+                          _stars(s.stars),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(s.review, style: body(14)),
+                    ],
+                  ),
+                ),
               ),
-              delegate: SliverChildBuilderDelegate((context, i) => _StoryCard(story: list[i]), childCount: list.length),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
