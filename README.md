@@ -192,3 +192,17 @@ customer sees the status and reply under Nearby → Your quote requests.
 **Lead counts**: taps on Call, WhatsApp, Instagram, website and other links are saved in
 `leadTaps`. The provider home shows "Your leads this month": quote requests plus taps. This is
 what a future Provider Pro plan or pay-per-lead pricing will be based on.
+
+## Venue, weather and "near" search
+
+- Each event has a **venue** (`EventDetails.venue`): the current location by default (when
+  location access was already allowed) or any address, venue or city the user searches for.
+  Addresses come from OpenStreetMap's free Nominatim service; location from `geolocator`.
+- The Plan screen shows the **weather** at the venue for party day from Open-Meteo (free, no key):
+  summary, high/low, chance of rain during the party hours, and advice (tent, shade, heaters).
+  Forecasts appear 16 days before the party.
+- **Find nearby** searches near the venue, the current location or an address. Providers are sorted
+  by distance ("3.2 mi"); a provider's city is placed on the map when they save their listing.
+- **Budget**: each line (Food, Decor, Photography, Cake, Games) links to matching providers, and
+  Nearby has a "Within my budget" filter. Price ranges like "$15–$30 per plate" or "$25/hour"
+  are estimated for the guest count and hours.

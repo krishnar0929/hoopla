@@ -16,19 +16,82 @@ import '../widgets/gallery.dart';
 import '../widgets/reviews.dart';
 import '../widgets/locked.dart';
 import 'provider_detail_screen.dart';
+import '../widgets/place_picker.dart';
+import '../services/location_service.dart';
+import '../services/budget_match.dart';
 import '../services/quote_service.dart';
 import 'quotes_screens.dart';
 
 /// Find photographers, panthulu, decorators and more, and keep a shortlist.
 class NearbyScreen extends StatefulWidget {
-  const NearbyScreen({super.key});
+  const NearbyScreen({super.key, this.initialCategory, this.standalone = false, this.startWithinBudget = false});
+
+  /// Service to show first (e.g. from the Budget tab).
+  final String? initialCategory;
+
+  /// Opened as its own page (with a back button) instead of as a tab.
+  final bool standalone;
+
+  /// Start with "Within my budget" switched on.
+  final bool startWithinBudget;
 
   @override
   State<NearbyScreen> createState() => _NearbyScreenState();
 }
 
 class _NearbyScreenState extends State<NearbyScreen> {
-  String selected = helperCategories.first.label;
+  late String selected = widget.initialCategory ?? helperCategories.first.label;
+  late bool withinBudget = widget.startWithinBudget;
+
+  /// Where to search: the venue, the current location, or an address the user picked.
+  Place? near;
+  bool _nearSet = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_nearSet) return;
+    _nearSet = true;
+    near = AppScope.of(context).event?.venue;
+    if (near == null) {
+      LocationService.currentIfAllowed().then((p) {
+        if (mounted && near == null && p != null) setState(() => near = p);
+      });
+    }
+  }
+
+  Future<void> _changeNear() async {
+    final p = await pickPlace(context, title: 'Search near…', hint: 'Address, area or ZIP code');
+    if (p != null && mounted) setState(() => near = p);
+  }
+
+  /// This service's share of the budget (null when no budget or not a budget line).
+  double? _budgetFor(AppState state) {
+    final total = state.event?.budget;
+    if (total == null || total <= 0) return null;
+    for (final line in state.plan.budget) {
+      if (budgetServices[line.label] == selected) return total * line.share;
+    }
+    return null;
+  }
+
+  /// Budget filter, then nearest first (providers without a map position last).
+  List<ProviderProfile> _arrange(List<ProviderProfile> list, AppState state) {
+    final cap = withinBudget ? _budgetFor(state) : null;
+    final e = state.event!;
+    final kept = [for (final p in list) if (cap == null || fitsBudget(p, e, cap)) p];
+    final n = near;
+    if (n == null) return kept;
+    double d(ProviderProfile p) => (p.lat == null || p.lng == null) ? double.infinity : milesBetween(n.lat, n.lng, p.lat!, p.lng!);
+    kept.sort((a, b) => d(a).compareTo(d(b)));
+    return kept;
+  }
+
+  double? _distance(ProviderProfile p) {
+    final n = near;
+    if (n == null || p.lat == null || p.lng == null) return null;
+    return milesBetween(n.lat, n.lng, p.lat!, p.lng!);
+  }
   String query = '';
   Timer? _searchPause;
   Future<List<ProviderProfile>>? _providers;
@@ -131,12 +194,16 @@ class _NearbyScreenState extends State<NearbyScreen> {
     final cats = helperCategories.where((c) => query.isEmpty || c.label.toLowerCase().contains(query.toLowerCase())).toList();
     final mine = e.shortlist.where((v) => v.category == selected).toList();
 
-    return ListView(
-      padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 20, 20, 24),
+    final budgetCap = _budgetFor(state);
+    final money = NumberFormat.simpleCurrency(decimalDigits: 0);
+    final page = ListView(
+      padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + (widget.standalone ? 4 : 20), 20, 24),
       children: [
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            if (widget.standalone)
+              IconButton(tooltip: 'Back', onPressed: () => Navigator.of(context).pop(), icon: const Icon(Icons.arrow_back_rounded)),
             Expanded(child: Text('Find nearby', style: display(30))),
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
@@ -144,7 +211,40 @@ class _NearbyScreenState extends State<NearbyScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
+        // Where to search.
+        Material(
+          color: HC.card,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: HC.line)),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: _changeNear,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+              child: Row(
+                children: [
+                  const Icon(Icons.place_rounded, color: HC.violet, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(children: [
+                        TextSpan(text: 'Near ', style: body(14, color: HC.muted)),
+                        TextSpan(
+                          text: near == null ? 'you (tap to set a location)' : (near == e.venue ? '${near!.label} · your venue' : near!.label),
+                          style: body(14, weight: FontWeight.w600),
+                        ),
+                      ]),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Text('Change', style: body(13, color: HC.violet, weight: FontWeight.w600)),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
         TextField(
           onChanged: _onSearch,
           onSubmitted: (v) => _onSearch(v, now: true),
@@ -212,7 +312,7 @@ class _NearbyScreenState extends State<NearbyScreen> {
             Expanded(
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(minimumSize: const Size(0, 46), side: const BorderSide(color: HC.line), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-                onPressed: () => openLink(context, category.mapsSearch),
+                onPressed: () => openLink(context, category.mapsSearchNear(near?.address.isNotEmpty == true ? near!.address : near?.label)),
                 icon: const Icon(Icons.open_in_new_rounded, size: 18, color: HC.ink),
                 label: Text('Open map', style: body(14, weight: FontWeight.w600)),
               ),
@@ -230,6 +330,19 @@ class _NearbyScreenState extends State<NearbyScreen> {
         ),
         if (state.accounts != null) ...[
           const SizedBox(height: 20),
+          if (budgetCap != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: FilterChip(
+                selected: withinBudget,
+                showCheckmark: true,
+                selectedColor: HC.lime,
+                backgroundColor: HC.card,
+                side: const BorderSide(color: HC.line),
+                label: Text('Within my ${selected.toLowerCase()} budget (${money.format(budgetCap)})'),
+                onSelected: (v) => setState(() => withinBudget = v),
+              ),
+            ),
           if (state.isSignedIn) const MyQuotesLink(),
           Text('ON HOOPLA', style: overline()),
           const SizedBox(height: 8),
@@ -242,8 +355,17 @@ class _NearbyScreenState extends State<NearbyScreen> {
                   child: Center(child: CircularProgressIndicator(strokeWidth: 2.5)),
                 );
               }
-              final list = snap.hasError ? const <ProviderProfile>[] : (snap.data ?? const <ProviderProfile>[]);
-              final samples = showSampleProviders && list.length < 3 ? sampleProvidersFor(selected).take(3 - list.length).toList() : const <ProviderProfile>[];
+              final all = snap.hasError ? const <ProviderProfile>[] : (snap.data ?? const <ProviderProfile>[]);
+              final list = _arrange(all, state);
+              final samples = showSampleProviders && all.length < 3
+                  ? _arrange(sampleProvidersFor(selected).take(3 - all.length).toList(), state)
+                  : const <ProviderProfile>[];
+              if (withinBudget && list.isEmpty && samples.isEmpty && budgetCap != null) {
+                return Text(
+                  'No ${selected.toLowerCase()} on Hoopla fit ${money.format(budgetCap)} yet. Turn off the budget filter or raise the budget in your plan.',
+                  style: body(13, color: HC.muted),
+                );
+              }
               if (list.isEmpty && samples.isEmpty) {
                 return Text(
                   'No ${selected.toLowerCase()} have joined Hoopla yet. Use the map above meanwhile.',
@@ -253,7 +375,7 @@ class _NearbyScreenState extends State<NearbyScreen> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (var i = 0; i < list.length; i++) _ProviderCard(provider: list[i], tile: HC.tiles[i % HC.tiles.length]),
+                  for (var i = 0; i < list.length; i++) _ProviderCard(provider: list[i], tile: HC.tiles[i % HC.tiles.length], miles: _distance(list[i])),
                   if (samples.isNotEmpty) ...[
                     Padding(
                       padding: EdgeInsets.only(top: list.isEmpty ? 0 : 8, bottom: 8),
@@ -264,7 +386,8 @@ class _NearbyScreenState extends State<NearbyScreen> {
                         style: body(12, color: HC.muted),
                       ),
                     ),
-                    for (var i = 0; i < samples.length; i++) _ProviderCard(provider: samples[i], tile: HC.tiles[(i + 2) % HC.tiles.length]),
+                    for (var i = 0; i < samples.length; i++)
+                      _ProviderCard(provider: samples[i], tile: HC.tiles[(i + 2) % HC.tiles.length], miles: _distance(samples[i])),
                   ],
                 ],
               );
@@ -284,6 +407,7 @@ class _NearbyScreenState extends State<NearbyScreen> {
           ),
       ],
     );
+    return widget.standalone ? Scaffold(body: SafeArea(bottom: false, child: page)) : page;
   }
 }
 
@@ -392,9 +516,12 @@ class _SmallButton extends StatelessWidget {
 
 /// A provider who joined Hoopla, with one-tap contact.
 class _ProviderCard extends StatelessWidget {
-  const _ProviderCard({required this.provider, required this.tile});
+  const _ProviderCard({required this.provider, required this.tile, this.miles});
   final ProviderProfile provider;
   final Color tile;
+
+  /// Distance from where the customer is searching, when known.
+  final double? miles;
 
   @override
   Widget build(BuildContext context) {
@@ -407,7 +534,12 @@ class _ProviderCard extends StatelessWidget {
         'at ${clockAmPm(e.startMinutes)} for about ${e.guests} guests (${e.indoor ? 'indoor' : 'outdoor'}). '
         'Are you available, and could you share a quote?';
     final saved = e.shortlist.any((v) => v.id == p.uid);
-    final details = [p.city, if (p.priceRange.isNotEmpty) p.priceRange].join(' · ');
+    final details = [
+      if (miles != null) distanceLabel(miles!) else p.city,
+      if (miles != null) p.city,
+      if (p.priceRange.isNotEmpty) p.priceRange,
+    ].join(' · ');
+    final estimate = estimateLabel(p, e);
 
     /// Real listings call/message; sample listings explain what they are.
     VoidCallback? contact(VoidCallback action) {
@@ -476,6 +608,7 @@ class _ProviderCard extends StatelessWidget {
                   ),
                   RatingBadge(providerUid: p.uid),
                   if (details.isNotEmpty) Text(details, style: body(12, color: HC.muted)),
+                  if (estimate.isNotEmpty) Text(estimate, style: body(12, color: HC.violet, weight: FontWeight.w600)),
                   if (p.about.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 2),

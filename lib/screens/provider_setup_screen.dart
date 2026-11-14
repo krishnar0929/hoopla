@@ -5,6 +5,7 @@ import '../data/helpers.dart';
 import '../models/provider_profile.dart';
 import '../services/account_service.dart';
 import '../services/gallery_service.dart';
+import '../services/location_service.dart';
 import '../services/shared_reels.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
@@ -174,6 +175,19 @@ class _ProviderSetupScreenState extends State<ProviderSetupScreen> {
       error = null;
     });
     try {
+      // Find the city on the map once, so customers can see "x mi away".
+      final city = cityCtrl.text.trim();
+      double? lat = widget.existing?.city == city ? widget.existing?.lat : null;
+      double? lng = widget.existing?.city == city ? widget.existing?.lng : null;
+      if (lat == null) {
+        try {
+          final found = await LocationService.search(city);
+          if (found.isNotEmpty) {
+            lat = found.first.lat;
+            lng = found.first.lng;
+          }
+        } catch (_) {}
+      }
       await state.saveProvider(ProviderProfile(
         uid: uid,
         businessName: nameCtrl.text.trim(),
@@ -190,6 +204,8 @@ class _ProviderSetupScreenState extends State<ProviderSetupScreen> {
         tiktok: ttCtrl.text.trim(),
         reviewsLink: reviewsCtrl.text.trim(),
         featured: featured,
+        lat: lat,
+        lng: lng,
       ));
       for (final url in removed) {
         GalleryService.delete(url);

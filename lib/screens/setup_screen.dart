@@ -13,6 +13,8 @@ import '../widgets/reminder_ui.dart';
 import '../widgets/common.dart';
 import 'account_sheet.dart';
 import 'sign_in_screen.dart';
+import '../services/location_service.dart';
+import '../widgets/place_picker.dart';
 
 /// "Tell us about your event" — used to create a new event or edit one.
 class SetupScreen extends StatefulWidget {
@@ -38,6 +40,10 @@ class _SetupScreenState extends State<SetupScreen> {
   late int guests;
   late Audience audience;
   late int energy;
+
+  /// The party venue. New events start at the current location when allowed.
+  Place? venue;
+  bool locating = false;
   bool saving = false;
   final describeCtrl = TextEditingController();
   String? describeNote;
@@ -55,6 +61,22 @@ class _SetupScreenState extends State<SetupScreen> {
     guests = e?.guests ?? 30;
     audience = e?.audience ?? Audience.kids;
     energy = e?.energy ?? 1;
+    venue = e?.venue;
+    if (e == null) {
+      locating = true;
+      LocationService.currentIfAllowed().then((p) {
+        if (!mounted) return;
+        setState(() {
+          locating = false;
+          venue ??= p;
+        });
+      });
+    }
+  }
+
+  Future<void> _pickVenue() async {
+    final p = await pickPlace(context);
+    if (p != null && mounted) setState(() => venue = p);
   }
 
   @override
@@ -167,7 +189,8 @@ class _SetupScreenState extends State<SetupScreen> {
       ..indoor = indoor
       ..guests = guests
       ..audience = audience
-      ..energy = energy;
+      ..energy = energy
+      ..venue = venue;
     e.gameIds = PlanGenerator.suggestGameIds(e);
     await state.saveEvent(e);
     final replaceId = widget.replaceId;
@@ -318,6 +341,8 @@ class _SetupScreenState extends State<SetupScreen> {
                           Expanded(child: _InfoTile(label: 'Start time', value: clockAmPm(startMinutes), onTap: _pickTime)),
                         ],
                       ),
+                      const SizedBox(height: 10),
+                      _VenueTile(venue: venue, locating: locating, onTap: _pickVenue),
                       const SizedBox(height: 20),
                       const SectionLabel('How long?'),
                       Wrap(
@@ -473,6 +498,54 @@ class _StepButton extends StatelessWidget {
           message: label,
           child: SizedBox(width: 46, height: 46, child: Icon(icon, color: dark ? Colors.white : HC.ink)),
         ),
+      ),
+    );
+  }
+}
+
+/// "📍 Venue" tile: current location or the address the user picked.
+class _VenueTile extends StatelessWidget {
+  const _VenueTile({required this.venue, required this.locating, required this.onTap});
+  final Place? venue;
+  final bool locating;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final v = venue;
+    return CardBox(
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      radius: 14,
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(color: HC.violet.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+            child: const Icon(Icons.place_outlined, color: HC.violet, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Venue', style: body(12, color: HC.muted)),
+                const SizedBox(height: 2),
+                Text(
+                  v == null
+                      ? (locating ? 'Finding your location…' : 'Current location or an address')
+                      : (v.address.isNotEmpty ? v.address : v.label),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: body(15, weight: FontWeight.w600, color: v == null ? HC.muted : HC.ink),
+                ),
+                Text(v == null ? 'For the weather forecast and helpers nearby' : 'Tap to change', style: body(11, color: HC.muted)),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded, color: HC.muted),
+        ],
       ),
     );
   }

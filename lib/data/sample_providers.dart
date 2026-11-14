@@ -10,6 +10,18 @@ const showSampleProviders = true;
 
 String _slug(String s) => s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '');
 
+/// Rough centers of the sample cities, for "x mi away".
+const _cityCoords = <String, (double, double)>{
+  'Edison, NJ': (40.5187, -74.4121),
+  'Iselin, NJ': (40.5754, -74.3224),
+  'Jersey City, NJ': (40.7178, -74.0431),
+  'Princeton, NJ': (40.3573, -74.6672),
+  'Piscataway, NJ': (40.5546, -74.4643),
+  'Parsippany, NJ': (40.8579, -74.4260),
+  'Plainsboro, NJ': (40.3337, -74.5810),
+  'Hoboken, NJ': (40.7440, -74.0324),
+};
+
 const _cities = ['Edison, NJ', 'Iselin, NJ', 'Jersey City, NJ', 'Princeton, NJ', 'Piscataway, NJ', 'Parsippany, NJ', 'Plainsboro, NJ', 'Hoboken, NJ'];
 
 /// [business name, price range, about] × 3 per service type.
@@ -145,6 +157,8 @@ List<ProviderProfile> sampleProvidersFor(String type) {
         businessName: rows[i][0],
         serviceType: type,
         city: _cities[(offset * 3 + i) % _cities.length],
+        lat: _cityCoords[_cities[(offset * 3 + i) % _cities.length]]?.$1,
+        lng: _cityCoords[_cities[(offset * 3 + i) % _cities.length]]?.$2,
         phone: '',
         priceRange: rows[i][1],
         about: rows[i][2],

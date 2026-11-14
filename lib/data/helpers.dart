@@ -4,8 +4,11 @@ class HelperCategory {
   final String label;
   final String search;
 
-  Uri get mapsSearch =>
-      Uri.https('www.google.com', '/maps/search/', {'api': '1', 'query': '$search near me'});
+  Uri get mapsSearch => mapsSearchNear(null);
+
+  /// Google Maps search for this service near a place ("near me" when none).
+  Uri mapsSearchNear(String? place) =>
+      Uri.https('www.google.com', '/maps/search/', {'api': '1', 'query': '$search near ${place == null || place.isEmpty ? 'me' : place}'});
 }
 
 const helperCategories = <HelperCategory>[

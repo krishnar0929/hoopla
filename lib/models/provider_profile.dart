@@ -17,6 +17,8 @@ class ProviderProfile {
     this.tiktok = '',
     this.reviewsLink = '',
     this.featured = const [],
+    this.lat,
+    this.lng,
     this.verified = false,
   });
 
@@ -50,6 +52,10 @@ class ProviderProfile {
 
   /// Link to their reviews elsewhere (Google, Yelp, WeddingWire, Facebook reviews).
   final String reviewsLink;
+
+  /// Map position of [city] (found when the listing is saved), for distance sorting.
+  final double? lat;
+  final double? lng;
 
   /// Links to their best posts: Instagram reels/posts, YouTube, TikTok videos.
   final List<String> featured;
@@ -96,6 +102,8 @@ class ProviderProfile {
         'tiktok': tiktok,
         'reviewsLink': reviewsLink,
         'featured': featured,
+        if (lat != null) 'lat': lat,
+        if (lng != null) 'lng': lng,
       };
 
   factory ProviderProfile.fromMap(Map<String, dynamic> m) => ProviderProfile(
@@ -114,6 +122,8 @@ class ProviderProfile {
         tiktok: m['tiktok'] as String? ?? '',
         reviewsLink: m['reviewsLink'] as String? ?? '',
         featured: [for (final x in (m['featured'] as List? ?? const [])) if (x is String) x],
+        lat: (m['lat'] as num?)?.toDouble(),
+        lng: (m['lng'] as num?)?.toDouble(),
         verified: m['verified'] as bool? ?? false,
       );
 }
