@@ -16,6 +16,7 @@ import 'services/shared_reels.dart';
 import 'services/search_log.dart';
 import 'state/app_state.dart';
 import 'theme.dart';
+import 'screens/rsvp_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,12 +54,17 @@ Future<void> main() async {
     final code = codeFromUri(Uri.base);
     if (code != null && state.referral.usedCode == null) await state.setPendingRefCode(code);
   }
-  runApp(HooplaApp(state: state));
+  // Party invites: https://hoopla-894ca.web.app/?invite=<hostUid>_<eventId>
+  final invite = kIsWeb ? Uri.base.queryParameters['invite'] : null;
+  runApp(HooplaApp(state: state, inviteId: (invite == null || invite.isEmpty) ? null : invite));
 }
 
 class HooplaApp extends StatefulWidget {
-  const HooplaApp({super.key, required this.state});
+  const HooplaApp({super.key, required this.state, this.inviteId});
   final AppState state;
+
+  /// Opened from a party invite link: show the RSVP page first.
+  final String? inviteId;
 
   @override
   State<HooplaApp> createState() => _HooplaAppState();
@@ -68,6 +74,7 @@ class _HooplaAppState extends State<HooplaApp> with WidgetsBindingObserver {
   final _messenger = GlobalKey<ScaffoldMessengerState>();
 
   AppState get state => widget.state;
+  late String? _inviteId = widget.inviteId;
 
   @override
   void initState() {
@@ -116,7 +123,9 @@ class _HooplaAppState extends State<HooplaApp> with WidgetsBindingObserver {
           title: 'Hoopla',
           debugShowCheckedModeBanner: false,
           theme: buildTheme(),
-          home: _home(state),
+          home: _inviteId != null
+              ? RsvpScreen(inviteId: _inviteId!, onPlanOwn: () => setState(() => _inviteId = null))
+              : _home(state),
         ),
       ),
     );

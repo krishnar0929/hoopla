@@ -189,6 +189,35 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Party invites: the public card guests open from the invite link, and their RSVPs.
+    // Invite id = {hostUid}_{eventId}. Anyone with the link can read the card and reply
+    // (guests get an anonymous login on the website); only the host sees all replies.
+    match /invites/{inviteId} {
+      allow read: if signedIn();
+      allow create, update: if hasAccount()
+        && request.resource.data.hostUid == request.auth.uid
+        && inviteId == request.auth.uid + '_' + request.resource.data.eventId
+        && request.resource.data.message is string && request.resource.data.message.size() <= 300
+        && request.resource.data.title is string && request.resource.data.title.size() <= 120
+        && request.resource.data.hostName is string && request.resource.data.hostName.size() <= 80;
+      allow delete: if signedIn() && resource.data.hostUid == request.auth.uid;
+
+      match /rsvps/{guestUid} {
+        allow read: if isOwner(guestUid)
+          || (signedIn() && get(/databases/$(database)/documents/invites/$(inviteId)).data.hostUid == request.auth.uid);
+        allow create, update: if isOwner(guestUid)
+          && exists(/databases/$(database)/documents/invites/$(inviteId))
+          && request.resource.data.keys().hasOnly(['name', 'status', 'adults', 'kids', 'note', 'updatedAt'])
+          && request.resource.data.status in ['going', 'maybe', 'no']
+          && request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 60
+          && request.resource.data.adults is int && request.resource.data.adults >= 0 && request.resource.data.adults <= 50
+          && request.resource.data.kids is int && request.resource.data.kids >= 0 && request.resource.data.kids <= 50
+          && request.resource.data.note is string && request.resource.data.note.size() <= 300
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if isOwner(guestUid);
+      }
+    }
+
     // Search history. The app can add an entry for its own user but can never
     // read, change or delete entries. View them in the Firebase console.
     // The logSearch Cloud Function (which adds the IP address) bypasses these rules.

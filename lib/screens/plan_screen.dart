@@ -16,6 +16,7 @@ import 'account_sheet.dart';
 import 'event_actions.dart';
 import 'nearby_screen.dart';
 import 'setup_screen.dart';
+import 'invite_screen.dart';
 
 /// The generated plan: timeline, checklist and budget.
 class PlanScreen extends StatefulWidget {
@@ -124,6 +125,41 @@ class _PlanScreenState extends State<PlanScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
           child: WeatherCard(event: state.event!),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+          child: Material(
+            color: HC.violet,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const InviteScreen())),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 10, 12),
+                child: Row(
+                  children: [
+                    const Text('💌', style: TextStyle(fontSize: 26)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Invite guests', style: body(15, color: Colors.white, weight: FontWeight.w700)),
+                          Text(
+                            state.event!.invitees.isEmpty
+                                ? 'WhatsApp, iMessage, text or email · track RSVPs'
+                                : '${state.event!.invitees.length} on your list · see who\'s coming',
+                            style: body(12, color: const Color(0xFFE4DDFF)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right_rounded, color: Colors.white),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),

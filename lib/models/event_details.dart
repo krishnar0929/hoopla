@@ -1,3 +1,4 @@
+import '../services/invite_service.dart';
 import '../services/location_service.dart';
 
 /// Who the event is mainly for. Drives which games get suggested.
@@ -68,6 +69,8 @@ class EventDetails {
     List<ShortlistVendor>? shortlist,
     List<SavedLink>? savedLinks,
     Map<String, DateTime>? taskReminders,
+    List<Invitee>? invitees,
+    this.inviteMessage = '',
     this.budget,
     this.venue,
     this.status = 'active',
@@ -77,6 +80,7 @@ class EventDetails {
         shortlist = shortlist ?? [],
         savedLinks = savedLinks ?? [],
         taskReminders = taskReminders ?? {},
+        invitees = invitees ?? [],
         updatedAt = updatedAt ?? DateTime.now();
 
   final String id;
@@ -97,6 +101,12 @@ class EventDetails {
   List<String> doneTasks;
   List<ShortlistVendor> shortlist;
   List<SavedLink> savedLinks;
+
+  /// People the host invited (their RSVPs live in invites/{hostUid}_{id}/rsvps).
+  List<Invitee> invitees;
+
+  /// The host's note on the invite.
+  String inviteMessage;
 
   /// Reminders the user set on checklist tasks: task id → when to remind.
   Map<String, DateTime> taskReminders;
@@ -136,6 +146,8 @@ class EventDetails {
         'doneTasks': doneTasks,
         'shortlist': shortlist.map((v) => v.toMap()).toList(),
         'savedLinks': savedLinks.map((l) => l.toMap()).toList(),
+        'invitees': invitees.map((i) => i.toMap()).toList(),
+        'inviteMessage': inviteMessage,
         'taskReminders': {for (final r in taskReminders.entries) r.key: r.value.toUtc().toIso8601String()},
         'budget': budget,
         'venue': venue?.toMap(),
@@ -161,6 +173,8 @@ class EventDetails {
       doneTasks: List<String>.from(m['doneTasks'] as List? ?? const []),
       shortlist: maps(m['shortlist']).map(ShortlistVendor.fromMap).toList(),
       savedLinks: maps(m['savedLinks']).map(SavedLink.fromMap).toList(),
+      invitees: maps(m['invitees']).map(Invitee.fromMap).toList(),
+      inviteMessage: m['inviteMessage'] as String? ?? '',
       taskReminders: {
         for (final r in (m['taskReminders'] as Map? ?? const {}).entries)
           if (DateTime.tryParse('${r.value}') != null) '${r.key}': DateTime.parse('${r.value}').toLocal(),

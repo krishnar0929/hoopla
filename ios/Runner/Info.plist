@@ -26,6 +26,8 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSContactsUsageDescription</key>
+	<string>Hoopla lets you pick friends from your contacts to send party invites. Your contacts are never uploaded.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Hoopla uses your location only while you use the app, to set your party venue, show the weather for party day and find helpers near you.</string>
 	<key>NSLocationAlwaysUsageDescription</key>

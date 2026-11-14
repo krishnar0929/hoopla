@@ -206,3 +206,19 @@ what a future Provider Pro plan or pay-per-lead pricing will be based on.
 - **Budget**: each line (Food, Decor, Photography, Cake, Games) links to matching providers, and
   Nearby has a "Within my budget" filter. Price ranges like "$15–$30 per plate" or "$25/hour"
   are estimated for the guest count and hours.
+
+## Invites and RSVPs
+
+Plan → **Invite guests**:
+- **Send to everyone:** Share… (system share sheet: WhatsApp groups, iMessage, Instagram, anything),
+  WhatsApp (pick chats or groups), Text (one message to all numbers on the list), Email (BCC to all),
+  Copy, Preview.
+- **Guest list:** pick from phone contacts (`flutter_contacts`, never uploaded) or paste numbers and
+  emails. Each person has quick WhatsApp / text / email buttons.
+- **RSVP page:** the invite link `https://hoopla-894ca.web.app/?invite={hostUid}_{eventId}` opens a
+  card with date, venue (map link) and the host's note. Guests reply Going / Maybe / Can't go with
+  adults and kids, add a note, and get "Add to calendar". No app or account needed.
+- **Who's coming:** going / maybe / can't go / no reply yet, headcount of adults and kids, and one
+  tap to use it as the plan's guest count.
+
+Firestore: `invites/{id}` (public card, written by the host) and `invites/{id}/rsvps/{guestUid}`.
