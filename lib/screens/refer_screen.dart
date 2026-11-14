@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 
 import '../services/referrals.dart';
 import '../state/app_state.dart';
@@ -10,8 +9,9 @@ import '../widgets/celebration.dart';
 import '../widgets/common.dart';
 import 'sign_in_screen.dart';
 
-/// Refer a friend: share your code; when a friend joins with it you both get
-/// a week of Pro free. Also where you type a friend's code.
+/// Invite friends: share your code with friends planning parties and with providers
+/// you know. Friends who join with it are counted. Also where you type a friend's code.
+/// (While Hoopla is free for users there is no reward; the counts are kept for later.)
 class ReferScreen extends StatefulWidget {
   const ReferScreen({super.key});
 
@@ -62,7 +62,7 @@ class _ReferScreenState extends State<ReferScreen> {
 
   Future<void> _signIn() async {
     final ok = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const SignInScreen(reason: 'Sign in free to get your invite code and your free week of Pro.')),
+      MaterialPageRoute(builder: (_) => const SignInScreen(reason: 'Sign in free to get your invite code.')),
     );
     if (ok == true && mounted) {
       final notice = AppScope.of(context).takeReferralNotice();
@@ -98,7 +98,7 @@ class _ReferScreenState extends State<ReferScreen> {
     if (err == null) {
       friendCtrl.clear();
       await state.setPendingRefCode(null);
-      Celebration.show(overlay, title: 'A week of Pro, on us!', message: 'Your friend gets a week too. Happy planning!', emoji: '🎁');
+      Celebration.show(overlay, title: 'Welcome to Hoopla!', message: 'Your friend\'s code is saved. Happy planning!', emoji: '🎁');
     }
   }
 
@@ -120,9 +120,8 @@ class _ReferScreenState extends State<ReferScreen> {
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
     final r = state.referral;
-    final until = state.bonusProUntil;
     return Scaffold(
-      appBar: AppBar(title: const Text('Refer a friend')),
+      appBar: AppBar(title: const Text('Invite friends')),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560),
@@ -131,11 +130,11 @@ class _ReferScreenState extends State<ReferScreen> {
             children: [
               const Text('🎁', style: TextStyle(fontSize: 48)),
               const SizedBox(height: 6),
-              Text('Give a week of Pro,\nget a week of Pro', style: display(26)),
+              Text('Parties are better\nwith friends', style: display(26)),
               const SizedBox(height: 8),
               Text(
-                'When a friend joins Hoopla with your code, you both get 1 week of Pro free: '
-                'enough to plan a whole party with helpers nearby and invites. Every friend adds another week.',
+                'Hoopla is free. Share your code with friends planning a party, and with the photographers, '
+                'decorators, panthulu and cooks you trust, so they can get listed too. Everyone who joins with your code is counted here.',
                 style: body(14, color: HC.muted),
               ),
               const SizedBox(height: 20),
@@ -157,24 +156,13 @@ class _ReferScreenState extends State<ReferScreen> {
                 _codeCard(),
               if (state.isSignedIn) ...[
                 const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(child: _Stat(value: '${r.friendsJoined}', label: r.friendsJoined == 1 ? 'friend joined' : 'friends joined')),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _Stat(
-                        value: state.onReferralBonus ? DateFormat('MMM d').format(until!) : '—',
-                        label: state.onReferralBonus ? 'Pro free until' : 'no free Pro yet',
-                      ),
-                    ),
-                  ],
-                ),
+                _Stat(value: '${r.friendsJoined}', label: r.friendsJoined == 1 ? 'friend joined with your code' : 'friends joined with your code'),
               ],
               const SizedBox(height: 24),
               const SectionLabel('How it works'),
-              const _Step(n: '1', text: 'Share your code or link with friends planning a party.'),
-              const _Step(n: '2', text: 'They download Hoopla, sign up, and enter your code.'),
-              const _Step(n: '3', text: 'You both get 1 week of Pro free, right away. No card needed.'),
+              const _Step(n: '1', text: 'Share your code or link with friends and with providers you trust.'),
+              const _Step(n: '2', text: 'They download Hoopla and enter your code when they sign up.'),
+              const _Step(n: '3', text: 'They show up here as friends who joined. Planning stays free for everyone.'),
               if (r.usedCode == null && state.usingCloud) ...[
                 const SizedBox(height: 20),
                 const SectionLabel('Have a friend\'s code?'),

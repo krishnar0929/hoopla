@@ -16,6 +16,8 @@ import '../widgets/gallery.dart';
 import '../widgets/reviews.dart';
 import '../widgets/locked.dart';
 import 'provider_detail_screen.dart';
+import '../services/quote_service.dart';
+import 'quotes_screens.dart';
 
 /// Find photographers, panthulu, decorators and more, and keep a shortlist.
 class NearbyScreen extends StatefulWidget {
@@ -112,7 +114,7 @@ class _NearbyScreenState extends State<NearbyScreen> {
   @override
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
-    if (!state.atLeast(Tier.pro)) {
+    if (AppState.userPlansEnabled && !state.atLeast(Tier.pro)) {
       return const LockedPage(
         title: 'Find nearby professionals',
         message: 'Part of Pro (\$9.99/month): photographers, decorators, panthulu, cake makers and more for your event, all in one place.',
@@ -228,6 +230,7 @@ class _NearbyScreenState extends State<NearbyScreen> {
         ),
         if (state.accounts != null) ...[
           const SizedBox(height: 20),
+          if (state.isSignedIn) const MyQuotesLink(),
           Text('ON HOOPLA', style: overline()),
           const SizedBox(height: 8),
           FutureBuilder<List<ProviderProfile>>(
@@ -483,15 +486,21 @@ class _ProviderCard extends StatelessWidget {
                     spacing: 6,
                     runSpacing: 6,
                     children: [
-                      _SmallButton(label: 'Call', onTap: contact(() => openLink(context, Uri(scheme: 'tel', path: digits)))),
+                      _SmallButton(label: 'Call', onTap: contact(() {
+                    QuoteService.logTap(p, 'call');
+                    openLink(context, Uri(scheme: 'tel', path: digits));
+                  })),
                       _SmallButton(
                         label: 'WhatsApp',
-                        onTap: contact(() => openLink(context, Uri.https('wa.me', '/$digits', {'text': quote}))),
+                        onTap: contact(() {
+                    QuoteService.logTap(p, 'whatsapp');
+                    openLink(context, Uri.https('wa.me', '/$digits', {'text': quote}));
+                  }),
                       ),
                       _SmallButton(
                         label: 'Get quote',
                         dark: true,
-                        onTap: contact(() => openLink(context, Uri(scheme: 'sms', path: digits, queryParameters: {'body': quote}))),
+                        onTap: () => requestQuote(context, p),
                       ),
                       if (!p.isSample)
                         _SmallButton(

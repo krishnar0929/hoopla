@@ -277,8 +277,12 @@ class AppState extends ChangeNotifier {
     return isSignedIn ? Access.member : Access.guest;
   }
 
-  /// Free plans keep one active event at a time.
-  bool get canAddEvent => access == Access.premium || activeEvents.isEmpty;
+  /// Hoopla is free for people planning events. Providers will pay for visibility and
+  /// leads instead. Paid user plans (Basic/Pro) stay in the code, switched off here.
+  static const userPlansEnabled = false;
+
+  /// Guests keep one event at a time; a free account has no limit.
+  bool get canAddEvent => isSignedIn || activeEvents.isEmpty || (userPlansEnabled && access == Access.premium);
 
   // ---------- loading ----------
 
@@ -467,7 +471,7 @@ class AppState extends ChangeNotifier {
     final code = pendingRefCode;
     if (code != null && referral.usedCode == null) {
       final err = await redeemCode(code);
-      _referralNotice = err ?? 'Friend\'s code applied! You both get 1 week of Pro free. 🎉';
+      _referralNotice = err ?? 'Friend\'s code applied. Welcome to Hoopla! 🎉';
     }
     if (code != null) await setPendingRefCode(null);
     await _loadEvents(preferId: preferId);

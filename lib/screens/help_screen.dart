@@ -83,9 +83,9 @@ class _HelpScreenState extends State<HelpScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Refer a friend', style: display(17)),
+                          Text('Invite friends', style: display(17)),
                           const SizedBox(height: 2),
-                          Text('You both get 1 week of Pro free. Stacks for every friend!', style: body(13)),
+                          Text('Hoopla is free. Share it with friends and with providers you trust.', style: body(13)),
                         ],
                       ),
                     ),

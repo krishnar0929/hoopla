@@ -82,7 +82,7 @@ class _SignInScreenState extends State<SignInScreen> {
       await state.afterSignIn(role, carry);
       final notice = state.takeReferralNotice();
       if (notice != null && notice.startsWith('Friend')) {
-        Celebration.show(overlay, title: 'A week of Pro, on us!', message: 'Your friend\'s code worked. You both get a week of Pro free.', emoji: '🎁');
+        Celebration.show(overlay, title: 'Welcome to Hoopla!', message: 'Your friend\'s invite code is saved. Happy planning!', emoji: '🎁');
       } else if (notice != null) {
         messenger.showSnackBar(SnackBar(content: Text(notice)));
       }
@@ -224,7 +224,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       autocorrect: false,
                       decoration: const InputDecoration(
                         labelText: 'Friend\'s invite code (optional)',
-                        helperText: 'You both get 1 week of Pro free',
+                        helperText: 'If a friend invited you'
                       ),
                     ),
                   ],

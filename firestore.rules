@@ -137,6 +137,58 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Quote requests: a customer asks a provider for a quote, with event details.
+    // Doc id = {customerUid}_{providerUid}_{eventId}: one per event and provider.
+    // Only that customer and that provider can read it. The provider sets
+    // seen / replied / booked / declined and writes the reply; the customer can
+    // cancel, or send it again after it was cancelled or declined.
+    match /quotes/{id} {
+      function q() { return request.resource.data; }
+      allow read: if signedIn()
+        && (resource.data.customerUid == request.auth.uid || resource.data.providerUid == request.auth.uid);
+      allow create: if hasAccount()
+        && q().customerUid == request.auth.uid
+        && q().providerUid != request.auth.uid
+        && id == q().customerUid + '_' + q().providerUid + '_' + q().eventId
+        && exists(/databases/$(database)/documents/providers/$(q().providerUid))
+        && q().keys().hasOnly(['customerUid', 'customerName', 'customerEmail', 'customerPhone', 'providerUid',
+             'providerName', 'serviceType', 'eventId', 'eventTitle', 'occasion', 'eventDate', 'startMinutes',
+             'guests', 'indoor', 'message', 'status', 'reply', 'createdAt', 'updatedAt'])
+        && q().status == 'new'
+        && q().reply == ''
+        && q().message is string && q().message.size() > 0 && q().message.size() <= 1500
+        && q().customerName is string && q().customerName.size() <= 80
+        && q().customerPhone is string && q().customerPhone.size() <= 30
+        && q().createdAt == request.time
+        && q().updatedAt == request.time;
+      allow update: if signedIn() && q().updatedAt == request.time && (
+        (resource.data.providerUid == request.auth.uid
+          && q().diff(resource.data).affectedKeys().hasOnly(['status', 'reply', 'repliedAt', 'updatedAt'])
+          && q().status in ['seen', 'replied', 'booked', 'declined']
+          && q().reply is string && q().reply.size() <= 1000)
+        || (resource.data.customerUid == request.auth.uid
+          && q().diff(resource.data).affectedKeys().hasOnly(['status', 'message', 'reply', 'updatedAt'])
+          && (q().status == 'cancelled'
+            || (q().status == 'new' && q().reply == '' && resource.data.status in ['cancelled', 'declined']
+                && q().message is string && q().message.size() > 0 && q().message.size() <= 1500))));
+      allow delete: if false;
+    }
+
+    // Taps on a provider's Call / WhatsApp / Instagram / website buttons, so providers
+    // can see how many people reached out. Anyone using the app (guests too) adds them;
+    // only that provider reads them.
+    match /leadTaps/{id} {
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasOnly(['uid', 'providerUid', 'kind', 'createdAt'])
+        && request.resource.data.providerUid is string && request.resource.data.providerUid.size() < 128
+        && request.resource.data.providerUid != request.auth.uid
+        && request.resource.data.kind in ['call', 'whatsapp', 'instagram', 'facebook', 'youtube', 'tiktok', 'reviews', 'website']
+        && request.resource.data.createdAt == request.time;
+      allow read: if signedIn() && resource.data.providerUid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
     // Search history. The app can add an entry for its own user but can never
     // read, change or delete entries. View them in the Firebase console.
     // The logSearch Cloud Function (which adds the IP address) bypasses these rules.

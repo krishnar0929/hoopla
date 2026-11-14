@@ -9,6 +9,7 @@ import '../widgets/gallery.dart';
 import '../widgets/reviews.dart';
 import 'account_sheet.dart';
 import 'provider_setup_screen.dart';
+import 'quotes_screens.dart';
 
 /// Home for service providers: their listing and how customers reach them.
 class ProviderHomeScreen extends StatelessWidget {
@@ -46,6 +47,8 @@ class ProviderHomeScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 18),
+                const LeadSummaryCard(),
+                const SizedBox(height: 12),
                 CardBox(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -139,12 +142,7 @@ class ProviderHomeScreen extends StatelessWidget {
                 Text('Ratings & reviews', style: display(18, weight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 ReviewsSection(provider: p, ownListing: true),
-                const SizedBox(height: 12),
-                const _InfoCard(
-                  icon: Icons.inbox_outlined,
-                  title: 'Quote inbox',
-                  text: 'Coming soon. For now, requests come to you by call and WhatsApp.',
-                ),
+
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: () => state.setRole(UserRole.customer),

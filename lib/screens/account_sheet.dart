@@ -112,11 +112,15 @@ class _AccountSheet extends StatelessWidget {
         Text(state.email ?? 'Signed in', style: body(15, weight: FontWeight.w600)),
         const SizedBox(height: 2),
         Text(
-          '${state.isProvider ? 'Provider' : 'Customer'} · ${state.tier.label} plan'
-          '${state.onReferralBonus && state.paidTier != Tier.pro ? ' (friend bonus until ${DateFormat('MMM d').format(state.bonusProUntil!)})' : state.onTrial ? ' (free trial)' : ''}',
+          AppState.userPlansEnabled
+              ? '${state.isProvider ? 'Provider' : 'Customer'} · ${state.tier.label} plan'
+                  '${state.onReferralBonus && state.paidTier != Tier.pro ? ' (friend bonus until ${DateFormat('MMM d').format(state.bonusProUntil!)})' : state.onTrial ? ' (free trial)' : ''}'
+              : state.isProvider
+                  ? 'Provider account'
+                  : 'Planning events · Hoopla is free',
           style: body(13, color: HC.muted),
         ),
-        if (state.onTrial) ...[
+        if (AppState.userPlansEnabled && state.onTrial) ...[
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
@@ -135,7 +139,7 @@ class _AccountSheet extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 16),
-        if (state.tier != Tier.pro)
+        if (AppState.userPlansEnabled && state.tier != Tier.pro)
           _SheetButton(label: state.isPremium ? 'Change plan' : 'See plans', filled: true, onTap: () => open(const UpgradeScreen())),
         if (!state.isProvider)
           _SheetButton(
@@ -169,7 +173,7 @@ class _AccountSheet extends StatelessWidget {
 
     children.insertAll(children.length - (state.isSignedIn && state.usingCloud ? 2 : 0), [
       const Divider(color: HC.line, height: 20),
-      _SheetButton(label: '🎁  Refer a friend · you both get a week of Pro', onTap: () => open(const ReferScreen())),
+      _SheetButton(label: '🎁  Invite friends to Hoopla', onTap: () => open(const ReferScreen())),
       _SheetButton(label: 'Help, feedback & rate Hoopla', onTap: () => open(const HelpScreen())),
     ]);
 

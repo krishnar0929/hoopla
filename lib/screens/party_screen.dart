@@ -83,7 +83,7 @@ class _PartyScreenState extends State<PartyScreen> {
   @override
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
-    if (state.access != Access.premium) {
+    if (AppState.userPlansEnabled && state.access != Access.premium) {
       return Container(
         color: HC.ink,
         child: const LockedPage(

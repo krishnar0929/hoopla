@@ -9,6 +9,7 @@ import '../services/shared_reels.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import 'common.dart';
+import '../services/quote_service.dart';
 
 const _gold = Color(0xFFF5B400);
 
@@ -94,7 +95,10 @@ class SocialLinks extends StatelessWidget {
               backgroundColor: HC.card,
               side: const BorderSide(color: HC.line),
               shape: const StadiumBorder(),
-              onPressed: () => openLink(context, url),
+              onPressed: () {
+                QuoteService.logTap(p, label.toLowerCase());
+                openLink(context, url);
+              },
             ),
       ],
     );

@@ -6,11 +6,11 @@ import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import 'setup_screen.dart';
-import 'upgrade_screen.dart';
+import 'sign_in_screen.dart';
 
 const _danger = Color(0xFFB42318);
 
-/// "Start new event". Free plans keep one event, so offer to replace it or upgrade.
+/// "Start new event". Guests keep one event, so offer to replace it or sign in free.
 Future<void> startNewEvent(BuildContext context) async {
   final state = AppScope.of(context);
   final nav = Navigator.of(context);
@@ -22,19 +22,20 @@ Future<void> startNewEvent(BuildContext context) async {
   final choice = await showDialog<String>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Free plan keeps one event'),
+      title: const Text('Plan more than one event?'),
       content: Text(
-        'Upgrade to plan several events at once, or replace "${current?.title ?? 'your event'}". '
+        'Sign in free to plan as many events as you like, or replace "${current?.title ?? 'your event'}". '
         'It moves to My events → Cancelled and you can bring it back later.',
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx, 'replace'), child: const Text('Replace it')),
-        FilledButton(onPressed: () => Navigator.pop(ctx, 'upgrade'), child: const Text('See plans')),
+        FilledButton(onPressed: () => Navigator.pop(ctx, 'upgrade'), child: const Text('Sign in free')),
       ],
     ),
   );
   if (choice == 'upgrade') {
-    await nav.push(MaterialPageRoute<void>(builder: (_) => const UpgradeScreen()));
+    final ok = await nav.push<bool>(MaterialPageRoute(builder: (_) => const SignInScreen(reason: 'It\'s free. Plan as many events as you like.')));
+    if (ok == true && state.canAddEvent) await nav.push(MaterialPageRoute<void>(builder: (_) => const SetupScreen()));
   } else if (choice == 'replace') {
     await nav.push(MaterialPageRoute<void>(builder: (_) => SetupScreen(replaceId: current?.id)));
   }
@@ -107,7 +108,7 @@ void showMyEvents(BuildContext context) {
                           onRestore: () async {
                             if (!state.canAddEvent) {
                               Navigator.pop(ctx);
-                              toast(context, 'Free plan keeps one event. Cancel the current one or upgrade to restore this.');
+                              toast(context, 'Guests keep one event. Sign in free (Account) or cancel the current one to restore this.');
                               return;
                             }
                             await state.restoreEvent(e.id);

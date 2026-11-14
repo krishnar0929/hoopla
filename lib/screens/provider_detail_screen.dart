@@ -5,6 +5,8 @@ import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/gallery.dart';
 import '../widgets/reviews.dart';
+import '../services/quote_service.dart';
+import 'quotes_screens.dart';
 
 /// A provider's full listing: photos of their work, about, prices and contact.
 class ProviderDetailScreen extends StatelessWidget {
@@ -75,17 +77,23 @@ class ProviderDetailScreen extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _Action(icon: Icons.call_outlined, label: 'Call', onTap: contact(() => openLink(context, Uri(scheme: 'tel', path: digits)))),
+                  _Action(icon: Icons.call_outlined, label: 'Call', onTap: contact(() {
+                    QuoteService.logTap(p, 'call');
+                    openLink(context, Uri(scheme: 'tel', path: digits));
+                  })),
                   _Action(
                     icon: Icons.chat_outlined,
                     label: 'WhatsApp',
-                    onTap: contact(() => openLink(context, Uri.https('wa.me', '/$digits', {'text': quote}))),
+                    onTap: contact(() {
+                    QuoteService.logTap(p, 'whatsapp');
+                    openLink(context, Uri.https('wa.me', '/$digits', {'text': quote}));
+                  }),
                   ),
                   _Action(
                     icon: Icons.request_quote_outlined,
                     label: 'Get quote',
                     dark: true,
-                    onTap: contact(() => openLink(context, Uri(scheme: 'sms', path: digits, queryParameters: {'body': quote}))),
+                    onTap: () => requestQuote(context, p),
                   ),
                 ],
               ),

@@ -134,12 +134,12 @@ class _PlanScreenState extends State<PlanScreen> {
                     message: 'Sign in free to get a to-do list with due dates for invites, bookings and supplies.',
                   )
                 : const _Checklist(),
-            _ => access == Access.premium
+            _ => access != Access.guest
                 ? const _Budget()
                 : const LockedCard(
-                    needs: Access.premium,
+                    needs: Access.member,
                     title: 'Budget planner',
-                    message: 'Basic and up split your budget into food, decor, photos, cake and return gifts.',
+                    message: 'Sign in free to split your budget into food, decor, photos, cake and return gifts.',
                   ),
           },
         ),

@@ -177,3 +177,18 @@ when Hoopla is closed. The website shows a note instead.
   the checklist turns them on or off.
 - Everything is recalculated whenever an event changes (`AppState.syncReminders`), keeping the
   soonest 60 (iOS allows 64). Rules live in `lib/services/reminder_plan.dart` (tested).
+
+## Business model: free for users, providers pay later
+
+Hoopla is free for people planning events (`AppState.userPlansEnabled = false` hides the old
+Basic/Pro plans; the code stays for a possible one-time Event Pass later). A free sign-in is only
+needed for the checklist, budget, more than one event, quote requests and reviews.
+
+**Quote requests** (`quotes/{customerUid}_{providerUid}_{eventId}`): customers tap "Get quote" on
+a provider, the event details are filled in, and the request lands in the provider's inbox. The
+provider replies in Hoopla, calls/WhatsApps the customer, or marks it booked / not available. The
+customer sees the status and reply under Nearby → Your quote requests.
+
+**Lead counts**: taps on Call, WhatsApp, Instagram, website and other links are saved in
+`leadTaps`. The provider home shows "Your leads this month": quote requests plus taps. This is
+what a future Provider Pro plan or pay-per-lead pricing will be based on.

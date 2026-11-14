@@ -39,7 +39,7 @@ String inviteLink(String code) => 'https://hoopla-894ca.web.app/?ref=$code';
 
 String inviteMessage(String code) =>
     'Planning a party? I use Hoopla for the plan, the games and finding helpers nearby. '
-    'Join with my code $code and we both get 1 week of Pro free: ${inviteLink(code)}';
+    'It\'s free! Join with my code $code: ${inviteLink(code)}';
 
 /// When the free Pro runs out, given the dates each bonus week was earned.
 /// Weeks earned while one is still running are added on the end.
