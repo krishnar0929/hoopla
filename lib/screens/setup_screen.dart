@@ -54,7 +54,7 @@ class _SetupScreenState extends State<SetupScreen> {
     final e = widget.existing;
     occasion = e?.occasion ?? occasions.first;
     titleCtrl = TextEditingController(text: e?.title ?? '');
-    date = e?.date ?? DateTime.now().add(const Duration(days: 30));
+    date = e?.date ?? _sampleDate();
     startMinutes = e?.startMinutes ?? 16 * 60;
     hours = e?.hours ?? 3;
     indoor = e?.indoor ?? true;
@@ -77,6 +77,13 @@ class _SetupScreenState extends State<SetupScreen> {
   Future<void> _pickVenue() async {
     final p = await pickPlace(context);
     if (p != null && mounted) setState(() => venue = p);
+  }
+
+  /// New parties start on the next Feb 26 (at 4 PM, the default start time).
+  static DateTime _sampleDate() {
+    final now = DateTime.now();
+    final thisYear = DateTime(now.year, 2, 26);
+    return thisYear.isAfter(now) ? thisYear : DateTime(now.year + 1, 2, 26);
   }
 
   @override
@@ -292,7 +299,7 @@ class _SetupScreenState extends State<SetupScreen> {
                                 style: body(14),
                                 decoration: const InputDecoration(
                                   fillColor: HC.ground,
-                                  hintText: "e.g. My son's 1st birthday, about 40 people in our backyard, Saturday Dec 12 at 4pm",
+                                  hintText: "e.g. Vir's 1st birthday, about 40 people in our backyard, Feb 26 at 4pm",
                                 ),
                               ),
                               const SizedBox(height: 10),
@@ -331,7 +338,7 @@ class _SetupScreenState extends State<SetupScreen> {
                         controller: titleCtrl,
                         textCapitalization: TextCapitalization.sentences,
                         style: body(15, weight: FontWeight.w500),
-                        decoration: const InputDecoration(hintText: "e.g. Aarav's 1st birthday"),
+                        decoration: const InputDecoration(hintText: "e.g. Vir's 1st birthday"),
                       ),
                       const SizedBox(height: 12),
                       Row(
