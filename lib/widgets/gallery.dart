@@ -16,6 +16,8 @@ class GalleryImage extends StatelessWidget {
       child: Image.network(
         url,
         fit: fit,
+        // On the website, photo hosts that block cross-site reads still show via a plain <img>.
+        webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
         loadingBuilder: (context, child, progress) =>
             progress == null ? child : Container(color: HC.track, alignment: Alignment.center, child: const Icon(Icons.photo_outlined, color: HC.muted)),
         errorBuilder: (context, _, __) =>

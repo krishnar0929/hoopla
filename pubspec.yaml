@@ -16,8 +16,10 @@ dependencies:
   firebase_core: ^3.6.0
   firebase_storage: ^12.3.4
   flutter_local_notifications: ^19.4.2
+  geolocator: '>=13.0.0 <15.0.0'
   google_fonts: ^6.2.1
   google_sign_in: ^6.2.2
+  http: ^1.2.2
   image_picker: ^1.1.2
   intl: ^0.19.0
   in_app_review: ^2.0.10

@@ -4,14 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import '../services/budget_match.dart';
 import '../services/plan_generator.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/locked.dart';
 import '../widgets/reminder_ui.dart';
+import '../widgets/weather_card.dart';
 import 'account_sheet.dart';
 import 'event_actions.dart';
+import 'nearby_screen.dart';
 import 'setup_screen.dart';
 
 /// The generated plan: timeline, checklist and budget.
@@ -117,6 +120,10 @@ class _PlanScreenState extends State<PlanScreen> {
               ),
             ],
           ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+          child: WeatherCard(event: state.event!),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 10),
@@ -410,7 +417,7 @@ class _BudgetState extends State<_Budget> {
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             style: display(24),
-            decoration: const InputDecoration(hintText: 'Enter an amount'),
+            decoration: const InputDecoration(hintText: 'Enter an amount', prefixText: '\$ '),
             onChanged: (v) => state.update((e) => e.budget = double.tryParse(v)),
           ),
           const SizedBox(height: 12),
@@ -419,13 +426,48 @@ class _BudgetState extends State<_Budget> {
             Container(
               padding: const EdgeInsets.symmetric(vertical: 10),
               decoration: const BoxDecoration(border: Border(top: BorderSide(color: Color(0xFFF0EEF7)))),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: Text(line.label, style: body(14))),
-                  Text(
-                    total == null ? '${(line.share * 100).round()}%' : money.format((total * line.share).round()),
-                    style: body(14, color: HC.muted, weight: FontWeight.w500),
+                  Row(
+                    children: [
+                      Expanded(child: Text(line.label, style: body(14))),
+                      Text(
+                        total == null ? '${(line.share * 100).round()}%' : '\$${money.format((total * line.share).round())}',
+                        style: body(14, color: HC.muted, weight: FontWeight.w500),
+                      ),
+                    ],
                   ),
+                  // Providers whose prices fit this part of the budget.
+                  if (budgetServices[line.label] != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                          builder: (_) => NearbyScreen(
+                            initialCategory: budgetServices[line.label],
+                            standalone: true,
+                            startWithinBudget: total != null,
+                          ),
+                        )),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                total == null
+                                    ? 'Find ${budgetServices[line.label]!.toLowerCase()}'
+                                    : '${budgetServices[line.label]} within \$${money.format((total * line.share).round())}',
+                                style: body(13, color: HC.violet, weight: FontWeight.w600),
+                              ),
+                              const Icon(Icons.chevron_right_rounded, size: 18, color: HC.violet),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

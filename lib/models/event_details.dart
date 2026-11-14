@@ -1,3 +1,5 @@
+import '../services/location_service.dart';
+
 /// Who the event is mainly for. Drives which games get suggested.
 enum Audience { kids, adults, everyone }
 
@@ -67,6 +69,7 @@ class EventDetails {
     List<SavedLink>? savedLinks,
     Map<String, DateTime>? taskReminders,
     this.budget,
+    this.venue,
     this.status = 'active',
     DateTime? updatedAt,
   })  : gameIds = gameIds ?? [],
@@ -98,6 +101,10 @@ class EventDetails {
   /// Reminders the user set on checklist tasks: task id → when to remind.
   Map<String, DateTime> taskReminders;
   double? budget;
+
+  /// Where the party is (for the weather and for finding providers nearby).
+  /// Null until the user picks one.
+  Place? venue;
 
   /// 'active' or 'cancelled'. Cancelled events stay in My events and can be restored.
   String status;
@@ -131,6 +138,7 @@ class EventDetails {
         'savedLinks': savedLinks.map((l) => l.toMap()).toList(),
         'taskReminders': {for (final r in taskReminders.entries) r.key: r.value.toUtc().toIso8601String()},
         'budget': budget,
+        'venue': venue?.toMap(),
         'status': status,
         'updatedAt': updatedAt.toUtc().toIso8601String(),
       };
@@ -158,6 +166,7 @@ class EventDetails {
           if (DateTime.tryParse('${r.value}') != null) '${r.key}': DateTime.parse('${r.value}').toLocal(),
       },
       budget: (m['budget'] as num?)?.toDouble(),
+      venue: Place.fromMap(m['venue']),
       status: m['status'] as String? ?? 'active',
       updatedAt: DateTime.tryParse(m['updatedAt'] as String? ?? '')?.toLocal(),
     );
