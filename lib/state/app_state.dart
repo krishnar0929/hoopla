@@ -281,6 +281,13 @@ class AppState extends ChangeNotifier {
   /// leads instead. Paid user plans (Basic/Pro) stay in the code, switched off here.
   static const userPlansEnabled = false;
 
+  /// Guests see the whole plan, checklist, budget and every game. Set true to
+  /// show only a preview until they sign in (free).
+  static const guestLimits = false;
+
+  /// Guests get a preview only when [guestLimits] is on.
+  bool get limitedGuest => guestLimits && access == Access.guest;
+
   /// Guests keep one event at a time; a free account has no limit.
   bool get canAddEvent => isSignedIn || activeEvents.isEmpty || (userPlansEnabled && access == Access.premium);
 

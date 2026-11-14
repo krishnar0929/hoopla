@@ -182,7 +182,7 @@ class _GamesScreenState extends State<GamesScreen> {
     final e = state.event!;
     final allGames = _games(e);
     // Guests see 3 games; signing in (free) shows them all.
-    final limited = state.access == Access.guest && allGames.length > 3;
+    final limited = state.limitedGuest && allGames.length > 3;
     final games = limited ? allGames.take(3).toList() : allGames;
     final width = MediaQuery.of(context).size.width;
     final columns = width > 900 ? 4 : (width > 600 ? 3 : 2);

@@ -34,7 +34,6 @@ class _PlanScreenState extends State<PlanScreen> {
     final e = state.event!;
     final plan = state.plan;
     final days = e.daysToGo;
-    final access = state.access;
 
     return ListView(
       padding: EdgeInsets.zero,
@@ -126,15 +125,15 @@ class _PlanScreenState extends State<PlanScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: switch (tab) {
-            0 => _Timeline(plan: plan, showOnly: access == Access.guest ? 3 : null),
-            1 => access == Access.guest
+            0 => _Timeline(plan: plan, showOnly: state.limitedGuest ? 3 : null),
+            1 => state.limitedGuest
                 ? const LockedCard(
                     needs: Access.member,
                     title: 'Your checklist',
                     message: 'Sign in free to get a to-do list with due dates for invites, bookings and supplies.',
                   )
                 : const _Checklist(),
-            _ => access != Access.guest
+            _ => !state.limitedGuest
                 ? const _Budget()
                 : const LockedCard(
                     needs: Access.member,
@@ -143,6 +142,24 @@ class _PlanScreenState extends State<PlanScreen> {
                   ),
           },
         ),
+        // Everything is free; signing in just keeps the plan safe on every device.
+        if (!state.isSignedIn && state.usingCloud)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+            child: CardBox(
+              padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+              child: Row(
+                children: [
+                  const Icon(Icons.cloud_done_outlined, color: HC.violet),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text('Sign in free to keep this plan on all your devices.', style: body(13)),
+                  ),
+                  TextButton(onPressed: () => openUnlock(context, Access.member), child: const Text('Sign in')),
+                ],
+              ),
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
           child: CardBox(
