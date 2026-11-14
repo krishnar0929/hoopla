@@ -15,10 +15,15 @@ import 'account_sheet.dart';
 import 'sign_in_screen.dart';
 import '../services/location_service.dart';
 import '../widgets/place_picker.dart';
+import '../data/party_stories.dart';
+import 'party_stories_screen.dart';
 
 /// "Tell us about your event" — used to create a new event or edit one.
 class SetupScreen extends StatefulWidget {
-  const SetupScreen({super.key, this.existing, this.replaceId});
+  const SetupScreen({super.key, this.existing, this.replaceId, this.preset});
+
+  /// "Plan a party like this": starts from a story's occasion, guests and place.
+  final PartyStory? preset;
 
   /// When set, the screen edits this event instead of creating a new one.
   final EventDetails? existing;
@@ -52,13 +57,14 @@ class _SetupScreenState extends State<SetupScreen> {
   void initState() {
     super.initState();
     final e = widget.existing;
-    occasion = e?.occasion ?? occasions.first;
+    final preset = widget.preset;
+    occasion = e?.occasion ?? (preset != null && occasions.contains(preset.occasion) ? preset.occasion : occasions.first);
     titleCtrl = TextEditingController(text: e?.title ?? '');
     date = e?.date ?? _sampleDate();
     startMinutes = e?.startMinutes ?? 16 * 60;
     hours = e?.hours ?? 3;
-    indoor = e?.indoor ?? true;
-    guests = e?.guests ?? 30;
+    indoor = e?.indoor ?? preset?.indoor ?? true;
+    guests = e?.guests ?? preset?.guests ?? 30;
     audience = e?.audience ?? Audience.kids;
     energy = e?.energy ?? 1;
     venue = e?.venue;
@@ -403,9 +409,18 @@ class _SetupScreenState extends State<SetupScreen> {
                             onPressed: () => Navigator.of(context).push(MaterialPageRoute<bool>(
                               builder: (_) => const SignInScreen(initialRole: UserRole.provider),
                             )),
-                            child: const Text('Photographer, decorator or panthulu? Join as a provider', textAlign: TextAlign.center),
+                            child: const Text(
+                              'Photographer, baker, DJ, decorator or panthulu? List your business on Hoopla free',
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         ),
+                      ],
+                      if (!editing && showSampleStories) ...[
+                        const SizedBox(height: 28),
+                        const PartyStoriesSection(),
+                        const SizedBox(height: 24),
+                        const HostReviewsSection(),
                       ],
                     ],
                   ),

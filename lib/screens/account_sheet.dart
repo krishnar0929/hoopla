@@ -9,6 +9,7 @@ import 'help_screen.dart';
 import 'refer_screen.dart';
 import 'sign_in_screen.dart';
 import 'upgrade_screen.dart';
+import 'party_stories_screen.dart';
 
 const _danger = Color(0xFFB42318);
 
@@ -228,8 +229,8 @@ class _AccountSheet extends StatelessWidget {
             _Row(
               icon: Icons.storefront_outlined,
               color: HC.coral,
-              title: 'Join as a provider',
-              subtitle: 'Photographers, decorators, panthulu, cooks… get found nearby',
+              title: 'List your business free',
+              subtitle: 'Photographers, bakers, DJs, decorators, panthulu, caterers…',
               onTap: () => open(const SignInScreen(initialRole: UserRole.provider)),
             ),
           ]),
@@ -273,6 +274,13 @@ class _AccountSheet extends StatelessWidget {
 
         const SizedBox(height: 18),
         _Group(title: 'Hoopla', rows: [
+          _Row(
+            icon: Icons.celebration_outlined,
+            color: HC.coral,
+            title: 'Party stories',
+            subtitle: 'Celebrations planned with Hoopla, with photos and games',
+            onTap: () => open(const PartyStoriesScreen()),
+          ),
           _Row(
             icon: Icons.card_giftcard_rounded,
             color: const Color(0xFF2EC4B6),
