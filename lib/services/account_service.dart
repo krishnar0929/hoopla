@@ -53,10 +53,13 @@ class AccountService {
         try {
           await current.linkWithPopup(provider);
         } on FirebaseAuthException catch (e) {
-          if (e.code == 'credential-already-in-use' && e.credential != null) {
+          // This Google account (or its email) already has a Hoopla account:
+          // sign in to that one instead. The guest's events are carried over.
+          if (!_alreadyHasAccount(e)) rethrow;
+          if (e.credential != null) {
             await _auth.signInWithCredential(e.credential!);
           } else {
-            rethrow;
+            await _auth.signInWithPopup(provider);
           }
         }
       } else {
@@ -82,11 +85,8 @@ class AccountService {
         try {
           await current.linkWithCredential(credential);
         } on FirebaseAuthException catch (e) {
-          if (e.code == 'credential-already-in-use') {
-            await _auth.signInWithCredential(e.credential ?? credential);
-          } else {
-            rethrow;
-          }
+          if (!_alreadyHasAccount(e)) rethrow;
+          await _auth.signInWithCredential(e.credential ?? credential);
         }
       } else {
         await _auth.signInWithCredential(credential);
@@ -111,15 +111,21 @@ class AccountService {
         await current.linkWithProvider(provider);
         return;
       } on FirebaseAuthException catch (e) {
-        if (e.code == 'credential-already-in-use' && e.credential != null) {
+        if (!_alreadyHasAccount(e)) rethrow;
+        if (e.credential != null) {
           await _auth.signInWithCredential(e.credential!);
-          return;
+        } else {
+          await _auth.signInWithProvider(provider);
         }
-        rethrow;
+        return;
       }
     }
     await _auth.signInWithProvider(provider);
   }
+
+  /// Linking the guest failed only because this login already belongs to an account.
+  static bool _alreadyHasAccount(FirebaseAuthException e) =>
+      e.code == 'credential-already-in-use' || e.code == 'email-already-in-use' || e.code == 'provider-already-linked';
 
   Future<void> sendPasswordReset(String email) => _auth.sendPasswordResetEmail(email: email);
 

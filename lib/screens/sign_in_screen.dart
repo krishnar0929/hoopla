@@ -130,6 +130,8 @@ class _SignInScreenState extends State<SignInScreen> {
         'too-many-requests' => 'Too many tries. Wait a minute and try again.',
         'network-request-failed' => 'No internet connection.',
         'operation-not-allowed' => 'This sign-in method isn\'t turned on yet (Firebase → Authentication → Sign-in method).',
+        'account-exists-with-different-credential' =>
+          'This email already signs in another way (email and password, or Apple). Use that instead, then you\'re in.',
         'popup-blocked' => 'Your browser blocked the pop-up. Allow pop-ups for this site and try again.',
         _ => e.message ?? 'Sign-in failed (${e.code}).',
       };
